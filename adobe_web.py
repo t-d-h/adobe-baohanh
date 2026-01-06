@@ -18,15 +18,66 @@ creds = Credentials.from_service_account_file("login.json", scopes=[
 client = gspread.authorize(creds)
 spreadsheet = client.open_by_key("")
 
+"""
+adobe_web Flask app
+
+Routes provided:
+ - GET  /        : Render homepage and show results/messages stored in session.
+ - POST /search  : Search for an email in Google Sheets; may provision a new account, update sheets, and return account data via session.
+ - POST /otp     : Lookup an email in the ADOBE_ACC sheet and attempt to read OTP from the account's mailbox.
+
+Notes:
+ - This module reads/writes Google Sheets and interacts with external services (mail.tm, Adobe APIs).
+ - Session keys used: 'result', 'otp', 'message'.
+ - Many functions have side-effects (sheet updates, starting threads, network calls).
+"""
+
 @app.route('/')
 def index():
-    result = session.pop('result', None)
-    otp = session.pop('otp', None)
-    message = session.pop('message', None)
-    return render_template('index.html', result=result, message=message, otp=otp)
+        """Render the homepage.
+
+        GET behavior:
+        - Renders 'index.html'.
+        - Pops session keys (if present) and passes them to the template:
+            - 'result' : dict with account info (email, password, created_date, status, profile)
+            - 'otp'    : string containing OTP or status message
+            - 'message': general status or error message shown to the user
+
+        Returns:
+        - Rendered template 'index.html'.
+        """
+        result = session.pop('result', None)
+        otp = session.pop('otp', None)
+        message = session.pop('message', None)
+        return render_template('index.html', result=result, message=message, otp=otp)
 
 @app.route("/search", methods=["POST"])
 def search():
+    """Handle the email search form and (if needed) provision an Adobe account.
+
+    Expected form data:
+      - 'email' : the email address to search for / request
+
+    Behavior summary:
+      1. Check the 'USER_ACC' sheet for the provided email. If not found, set
+         session['message'] and redirect to index.
+      2. Look up the latest entry in 'ADOBE_ACC' matching the email (column 5).
+         If found and created within 5 days, set session['result'] and redirect.
+      3. Otherwise, find the first row with status 'Tạo Mới' in 'ADOBE_ACC', mark
+         it visually in the sheet, start the admin provisioning thread, update
+         created timestamp/status/email on the sheet, call add_account() to add
+         the target email to Adobe product trials, write the displayName back to
+         the sheet, set session['result'] and redirect to index.
+
+    Side-effects:
+      - Mutates Google Sheets (formatting and cell updates).
+      - Starts a background thread (admin_adobe.start).
+      - Calls external APIs via add_account().
+
+    Returns:
+      - HTTP redirect to the index page in all cases; result or error message is
+        communicated via session keys.
+    """
     email = request.form.get("email")
     sheet = spreadsheet.worksheet("USER_ACC")
 
@@ -96,23 +147,38 @@ def search():
 
 @app.route("/otp", methods=["POST"])
 def otp():
-    email = request.form.get("email_otp")
-    sheet = spreadsheet.worksheet("ADOBE_ACC")
+        """Handle OTP retrieval request.
 
-    cell = sheet.find(email)
-    if cell is None:
-        message = "Không tìm thấy email trong hệ thống"
-        session['otp'] = message
-        return redirect(url_for("index"))
+        Expected form data:
+            - 'email_otp': the email address to look up in the 'ADOBE_ACC' sheet.
 
-    row_data = sheet.row_values(cell.row)
-    otp_code = readMail(row_data[0], row_data[1])
-    if otp_code == "":
-        message = "Không nhận được mail otp"
-        session['otp'] = message
+        Behavior:
+            - Finds the email row in 'ADOBE_ACC'. If missing, sets session['otp'] to an
+                error message and redirects to index.
+            - If found, calls readMail(email, password) to attempt to read an OTP code
+                from the account mailbox (mail.tm). If an OTP is returned, stores it in
+                session['otp'] as 'Mã OTP : <code>'. Otherwise stores a failure message.
+
+        Returns:
+            - Redirect to index; OTP or message is stored in session for display.
+        """
+        email = request.form.get("email_otp")
+        sheet = spreadsheet.worksheet("ADOBE_ACC")
+
+        cell = sheet.find(email)
+        if cell is None:
+                message = "Không tìm thấy email trong hệ thống"
+                session['otp'] = message
+                return redirect(url_for("index"))
+
+        row_data = sheet.row_values(cell.row)
+        otp_code = readMail(row_data[0], row_data[1])
+        if otp_code == "":
+                message = "Không nhận được mail otp"
+                session['otp'] = message
+                return redirect(url_for("index"))
+        session['otp'] = 'Mã OTP : ' + otp_code
         return redirect(url_for("index"))
-    session['otp'] = 'Mã OTP : ' + otp_code
-    return redirect(url_for("index"))
 
 def add_account(email):
     sheet = spreadsheet.worksheet("ADMIN_ACC")
