@@ -4,10 +4,10 @@ https://docs.google.com/spreadsheets/d/1k1pJaZfGAge3WosopDuDVKyA96-9nhcJ7Qdfo-nq
 
 
 Input:
-Đã có code : khách nhập tài khoản và mật khẩu
+khách nhập tài khoản và mật khẩu: OK
 
 Process:
-Đã có code : Check trong sheet USER_ACC (cột đầu xem có acc này k)
+Check trong sheet USER_ACC (cột đầu xem có acc này k): OK
 
 Lấy email và pass khách gửi để đăng nhập, nếu có lỗi j như là sai pass hay otp thì báo khách liên hệ zalo. Potential errors:
 - otp

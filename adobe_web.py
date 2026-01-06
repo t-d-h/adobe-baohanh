@@ -57,13 +57,15 @@ def search():
 
     Expected form data:
       - 'email' : the email address to search for / request
+      - 'password' : the password to verify against USER_ACC
 
     Behavior summary:
       1. Check the 'USER_ACC' sheet for the provided email. If not found, set
          session['message'] and redirect to index.
-      2. Look up the latest entry in 'ADOBE_ACC' matching the email (column 5).
+      2. Verify the password matches the one in USER_ACC. If not, set error message.
+      3. Look up the latest entry in 'ADOBE_ACC' matching the email (column 5).
          If found and created within 5 days, set session['result'] and redirect.
-      3. Otherwise, find the first row with status 'Tạo Mới' in 'ADOBE_ACC', mark
+      4. Otherwise, find the first row with status 'Tạo Mới' in 'ADOBE_ACC', mark
          it visually in the sheet, start the admin provisioning thread, update
          created timestamp/status/email on the sheet, call add_account() to add
          the target email to Adobe product trials, write the displayName back to
@@ -79,6 +81,7 @@ def search():
         communicated via session keys.
     """
     email = request.form.get("email")
+    password = request.form.get("password")
     sheet = spreadsheet.worksheet("USER_ACC")
 
     cell = sheet.find(email)
@@ -86,7 +89,7 @@ def search():
         message = "Không tìm thấy email, liên hệ zalo : 0876722439"
         session['message'] = message
         return redirect(url_for("index"))
-
+        
     sheet = spreadsheet.worksheet("ADOBE_ACC")
     # cell = sheet.find(email, in_column=5)
     cells = sheet.findall(email, in_column=5)

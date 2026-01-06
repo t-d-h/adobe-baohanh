@@ -153,7 +153,11 @@
       <form action="{{ url_for('search') }}" method="POST">
         <div class="mb-2">
           <label for="email" class="form-label">Nhập Email</label>
-          <input type="email" class="form-control" id="email" name="email" placeholder="Nhập email">
+          <input type="email" class="form-control" id="email" name="email" placeholder="Nhập email" required>
+        </div>
+        <div class="mb-2">
+          <label for="password" class="form-label">Nhập Mật Khẩu</label>
+          <input type="password" class="form-control" id="password" name="password" placeholder="Nhập mật khẩu" required>
         </div>
         <button type="submit" class="btn btn-primary w-100">Tìm Kiếm</button>
       </form>
