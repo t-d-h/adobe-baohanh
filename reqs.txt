@@ -1,0 +1,8 @@
+Flask
+gspread
+google-auth
+requests
+selenium
+Faker
+playwright
+
