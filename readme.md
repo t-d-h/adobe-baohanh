@@ -20,3 +20,8 @@ Xong thì đăng xuất.
 Tạo tài khoản mới với email khách gửi, thông tin random, pass Adobe@123.              Đã có code (reg_adobe.py)
 
 Add tài khoản mới vào admin, trả lại cho khách
+
+
+
+
+https://docs.gspread.org/en/latest/oauth2.html#enable-api-access

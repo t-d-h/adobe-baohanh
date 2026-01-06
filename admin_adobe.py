@@ -15,7 +15,7 @@ creds = Credentials.from_service_account_file("login.json", scopes=[
     "https://www.googleapis.com/auth/drive",
 ])
 client = gspread.authorize(creds)
-sheet_admin = client.open_by_key("").worksheet("ADMIN_ACC")
+sheet_admin = client.open_by_key("1NqJ2EwI0Xn4RuZ9KKfXqQbwziJ0ALzN1AFZ2svCee9M").worksheet("ADMIN_ACC")
 
 def clearApp():
     response = requests.get(f"http://localhost:1010/api/profiles")
