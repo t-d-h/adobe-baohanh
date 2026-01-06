@@ -1,0 +1,205 @@
+from google.oauth2.service_account import Credentials
+from flask import Flask, render_template, request, redirect, url_for, session
+import gspread
+import requests
+import json
+from datetime import datetime
+import time
+import re
+import threading
+import admin_adobe
+
+app = Flask(__name__)
+app.secret_key = 'adobe-renew-web'
+creds = Credentials.from_service_account_file("login.json", scopes=[
+    "https://www.googleapis.com/auth/spreadsheets",
+    "https://www.googleapis.com/auth/drive",
+])
+client = gspread.authorize(creds)
+spreadsheet = client.open_by_key("")
+
+@app.route('/')
+def index():
+    result = session.pop('result', None)
+    otp = session.pop('otp', None)
+    message = session.pop('message', None)
+    return render_template('index.html', result=result, message=message, otp=otp)
+
+@app.route("/search", methods=["POST"])
+def search():
+    email = request.form.get("email")
+    sheet = spreadsheet.worksheet("USER_ACC")
+
+    cell = sheet.find(email)
+    if cell is None:
+        message = "Không tìm thấy email, liên hệ zalo : 0876722439"
+        session['message'] = message
+        return redirect(url_for("index"))
+
+    sheet = spreadsheet.worksheet("ADOBE_ACC")
+    # cell = sheet.find(email, in_column=5)
+    cells = sheet.findall(email, in_column=5)
+    cell = None
+    if cells:
+        cell = max(cells, key=lambda cell: cell.row)
+    if cell is not None:
+        row_data = sheet.row_values(cell.row)
+        date_format = "%Y-%m-%d %H:%M:%S"
+        date_from_data = datetime.strptime(row_data[2], date_format)
+        current_date = datetime.now()
+        days_difference = (current_date - date_from_data).days
+        if days_difference < 5:
+            result_data = {
+                "email": row_data[0],
+                "password": row_data[1],
+                "created_date": row_data[2],
+                "status": row_data[3],
+                "profile": row_data[5]
+            }
+            session['result'] = result_data
+            return redirect(url_for("index"))
+
+    # cập nhật dữ liệu sheet
+    cell = sheet.find("Tạo Mới", in_column=4)
+    row_data = sheet.row_values(cell.row)
+    row_range = f"A{cell.row}:F{cell.row}"
+    sheet.format(row_range, {
+        "backgroundColor": {
+            "red": 0.8, "green": 1.0, "blue": 0.8
+        }
+    })
+    # login admin
+    thread = threading.Thread(target=admin_adobe.start)
+    thread.start()
+    # row_range = f"C{cell.row}:E{cell.row}"
+    # update_values = [str(), "Đã Xong", email]
+    # sheet.update(row_range, update_values)
+    sheet.update_cell(cell.row, 3, datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+    sheet.update_cell(cell.row, 4, "Đã Xong")
+    sheet.update_cell(cell.row, 5, email)
+
+    # Xử lý add account
+    displayName = add_account(row_data[0])
+    sheet.update_cell(cell.row, 6, displayName)
+
+    row_data = sheet.row_values(cell.row)
+    # trả về kết quả
+    result_data = {
+        "email": row_data[0],
+        "password": row_data[1],
+        "created_date": row_data[2],
+        "status": row_data[3],
+        "profile": row_data[5]
+    }
+    session['result'] = result_data
+    return redirect(url_for("index"))
+
+@app.route("/otp", methods=["POST"])
+def otp():
+    email = request.form.get("email_otp")
+    sheet = spreadsheet.worksheet("ADOBE_ACC")
+
+    cell = sheet.find(email)
+    if cell is None:
+        message = "Không tìm thấy email trong hệ thống"
+        session['otp'] = message
+        return redirect(url_for("index"))
+
+    row_data = sheet.row_values(cell.row)
+    otp_code = readMail(row_data[0], row_data[1])
+    if otp_code == "":
+        message = "Không nhận được mail otp"
+        session['otp'] = message
+        return redirect(url_for("index"))
+    session['otp'] = 'Mã OTP : ' + otp_code
+    return redirect(url_for("index"))
+
+def add_account(email):
+    sheet = spreadsheet.worksheet("ADMIN_ACC")
+    cell = sheet.find("Hoạt Động", in_column=4)
+    row_data = sheet.row_values(cell.row)
+    quantity = int(row_data[2])
+    cookie = row_data[4]
+    if quantity < 9:
+        sheet.update_cell(cell.row, 3, quantity + 1)
+    if quantity == 9:
+        sheet.update_cell(cell.row, 3, quantity + 1)
+        sheet.update_cell(cell.row, 4, "Đã Đầy")
+
+    # lấy token authen
+    headers = {
+        'cookie': cookie,
+        'origin': 'https://adminconsole.adobe.com',
+        'referer': 'https://adminconsole.adobe.com/',
+        'Content-Type': 'application/x-www-form-urlencoded'
+    }
+    payload = 'client_id=ONESIE1&scope=openid%2CAdobeID%2Cadditional_info.projectedProductContext%2Cread_organizations%2Cread_members%2Cread_countries_regions%2Cadditional_info.roles%2Cadobeio_api%2Cread_auth_src_domains%2CauthSources.rwd%2Cbis.read.pi%2Capp_policies.read%2Capp_policies.write%2Cclient.read%2Cpublisher.read%2Cclient.scopes.read%2Ccreative_cloud%2Cservice_principals.write%2Caps.read.app_merchandising%2Caps.eval_licensesforapps%2Cab.manage%2Caps.device_activation_mgmt%2Cpps.read%2Cip_list_write_scope'
+    response = requests.post("https://adobeid-na1.services.adobe.com/ims/check/v6/token?jslVersion=v2-v0.31.0-2-g1e8a8a8", headers=headers, data=payload)
+    organizations = response.json()['roles'][0]['organization']
+    displayName = response.json()['displayName']
+    headers = {
+        'Authorization': 'Bearer '+response.json()['access_token'],
+        'X-Api-Key': 'ONESIE1',
+        'Content-Type': 'application/json'
+    }
+
+    # thêm email vào account
+    response = requests.get("https://bps-il.adobe.io/jil-api/v2/organizations/"+organizations+"/products/?include_created_date=true&include_expired=true&include_groups_quantity=true&include_inactive=false&include_license_activations=true&include_license_allocation_info=false&includeAcquiredOfferIds=false&includeConfiguredProductArrangementId=false&includeLegacyLSFields=false&license_group_limit=100&processing_instruction_codes=administration", headers=headers)
+    response.json()
+    for product in response.json():
+        if product['applicableOfferType'] == 'TRIAL':
+            product_id = product['id']
+            license_id = product['licenseGroupSummaries'][0]['id']
+            break
+    payload = json.dumps([
+        {
+            "email": email,
+            "type": "TYPE2E",
+            "products": [
+            {
+                "id": str(product_id),
+                "licenseGroups": [
+                {
+                    "id": str(license_id)
+                }
+                ]
+            }
+            ],
+            "roles": [],
+            "userGroups": []
+        }
+    ])
+    response = requests.post("https://bps-il.adobe.io/jil-api/v2/organizations/"+organizations+"/users%3Abatch", headers=headers, data=payload)
+    response = requests.get("https://bps-il.adobe.io/jil-api/v2/organizations/"+organizations+"/users/?filter_exclude_domain=techacct.adobe.com&page=0&page_size=20&search_query=&sort=FNAME_LNAME&sort_order=ASC&currentPage=1&filterQuery=&include=DOMAIN_ENFORCEMENT_EXCEPTION_INDICATOR", headers=headers)
+    sheet.update_cell(cell.row, 3, len(response.json()))
+    return displayName
+
+def readMail(mail_address, password):
+    response = requests.post('https://api.mail.tm/token', json = { 'address': mail_address, 'password': password }, headers = { 'Content-Type': 'application/json' })
+    print(response.json())
+    token = response.json()['token']
+    num = 0
+    while num < 5:
+        num += 1
+        try:
+            response = requests.get("https://api.mail.tm/messages", headers = { 'Authorization': 'Bearer ' + token })
+            if len(response.json()['hydra:member']) == 0:
+                print('Waiting mail : ' + mail_address)
+            else:
+                for msg in response.json()['hydra:member']:
+                    #if 'code' in msg['subject'].lower():
+                    print(msg['intro'])
+                    match = re.search(r"\b\d{6}\b", msg['intro'])
+                    if match:
+                        verify_code = match.group()
+                        print("Verify Code : " + verify_code)
+                        return str(verify_code)
+                    else:
+                        print("Verify Code not found")
+        except:
+            a = 1
+        time.sleep(3)
+    return ""
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', debug=False, port=1100)

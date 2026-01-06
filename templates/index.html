@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Renew Adobee</title>
+  <link rel="icon" href="" type="image/x-icon">
+  <!-- Link CSS Bootstrap 5 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    /* Đặt background dạng gradient */
+    body {
+      min-height: 100vh;
+      background-image: url("/static/background.jpg");
+      background-size: cover;
+      background-repeat: no-repeat;
+      background-position: center;
+    }
+
+    /* Tùy chỉnh cho Card (bo tròn, đổ bóng) */
+    .custom-card {
+      background-color: #ffc4c4;
+      border: none;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
+    /* Tùy chỉnh phần tiêu đề */
+    .page-title {
+      font-weight: 600;
+      color: #fff;
+    }
+
+    /* Tùy chỉnh nút Primary */
+    .btn-primary {
+      background-color: #007bff;
+      border-color: #007bff;
+    }
+    .btn-primary:hover {
+      background-color: #0056b3;
+      border-color: #0056b3;
+    }
+
+    /* Tùy chỉnh nút Secondary */
+    .btn-secondary {
+      background-color: #6c757d;
+      border-color: #6c757d;
+    }
+    .btn-secondary:hover {
+      background-color: #5a6268;
+      border-color: #545b62;
+    }
+
+    /* Canh giữa card trong container */
+    .card-container {
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    /* Tùy chỉnh kích thước logo */
+    .logo {
+      max-width: 120px;
+    }
+    /* CSS cho màn hình loading */
+    #loading {
+        position: fixed;
+        width: 100%;
+        height: 100%;
+        background: rgba(255, 255, 255, 0.8);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+        display: none; /* Ẩn mặc định */
+    }
+
+    /* Hiệu ứng spinner */
+    .spinner {
+        width: 50px;
+        height: 50px;
+        border: 5px solid #ccc;
+        border-top: 5px solid #3498db;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    
+    .video-container {
+        position: relative;
+        /* width: 90%; */
+        /* max-width: 800px; */
+        aspect-ratio: 16 / 9;
+        cursor: pointer;
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+        transition: transform 0.3s ease-in-out;
+    }
+
+    .video-container:hover {
+        transform: scale(1.05);
+    }
+
+    .video-container img {
+        width: 100%;
+        height: 100%;
+        display: block;
+    }
+
+    .play-button {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(0, 0, 0, 0.6);
+        color: white;
+        font-size: 30px;
+        padding: 20px 30px;
+        border-radius: 50%;
+        transition: background 0.3s ease;
+    }
+
+    .video-container:hover .play-button {
+        background: rgba(0, 0, 0, 0.8);
+    }
+
+    iframe {
+        width: 100%;
+        height: 100%;
+        border: none;
+    }
+  </style>
+</head>
+<body>
+
+<div id="loading">
+  <div class="spinner"></div>
+</div>
+<div class="container py-5">
+  <!-- Logo và tiêu đề -->
+  <div class="text-center mb-4">
+    <img src="" alt="Logo" class="logo mb-1">
+    <h1 class="page-title">Tool Check Renew Adobe</h1>
+  </div>
+
+  <!-- Khối nhập email và nút Tìm Kiếm -->
+  <div class="card custom-card card-container mb-1">
+    <div class="card-body">
+      <form action="{{ url_for('search') }}" method="POST">
+        <div class="mb-2">
+          <label for="email" class="form-label">Nhập Email</label>
+          <input type="email" class="form-control" id="email" name="email" placeholder="Nhập email">
+        </div>
+        <button type="submit" class="btn btn-primary w-100">Tìm Kiếm</button>
+      </form>
+    </div>
+
+    {% if message %}
+      <div class="card-body">
+        <h5 class="card-title text-center text-danger mb-2">{{ message }}</h5>
+      </div>
+    {% else %}
+      {% if result %}
+        <div class="card-body">
+          <h5 class="card-title text-center">Thông tin tài khoản</h5>
+          <p><strong>Tài khoản:</strong> {{ result.email }}</p>
+          <p><strong>Mật Khẩu:</strong> {{ result.password }}</p>
+          <p><strong>Tên profile:</strong> {{ result.profile }}</p>
+          <p><strong>Trạng thái:</strong> <span class="text-success">{{ result.status }}</span></p>
+          <p><strong>Ngày tạo:</strong> {{ result.created_date }}</p>
+        </div>
+      {% else %}
+        <div class="card-body">
+          <h5 class="card-title text-center mb-3">Chưa có thông tin tài khoản</h5>
+        </div>
+      {% endif %}
+    {% endif %}
+    
+  </div>
+
+  <!-- Khối thông tin tài khoản -->
+  <!-- <div class="card custom-card card-container mb-4">
+    
+  </div> -->
+
+  <div class="card custom-card card-container mb-4">
+    <div class="card-body">
+      <form action="{{ url_for('otp') }}" method="POST">
+        <div class="mb-3">
+          <label for="email_otp" class="form-label">Nhập Email để lấy otp</label>
+          <div class="row">
+            <div class="col-sm-9 mb-2">
+                <input type="email" class="form-control" id="email_otp" name="email_otp" placeholder="Nhập email">
+            </div>
+            <div class="col-sm-3">
+                <button type="submit" class="btn btn-primary w-100">Lấy OTP</button>
+            </div>
+            {% if otp %}
+              <strong class="text-success">{{ otp }}</strong>
+            {% endif %}
+        </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="card-container mb-4" style="background-color: white; border-radius: 10px;">
+    <h5 class="text-center text-danger">Video hướng dẫn Bảo Hành</h5>
+    <div class="video-container video-data1" onclick="playVideo1()">
+      <img id="thumbnail" src="static/bao-hanh.jpg" alt="Thumbnail">
+      <div class="play-button">▶</div>
+    </div>
+    <h5 class="text-center text-danger pt-2">Cách lấy code khi bị xác minh</h5>
+    <div class="video-container video-data2" onclick="playVideo2()">
+      <img id="thumbnail" src="static/nhap-otp.jpg" alt="Thumbnail">
+      <div class="play-button">▶</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  document.querySelectorAll("form").forEach(form => {
+      form.addEventListener("submit", function() {
+          document.getElementById("loading").style.display = "flex"; // Hiện màn hình loading
+      });
+  });
+  function playVideo1() {
+    let container = document.querySelector(".video-data1");
+    container.innerHTML = `<iframe width="560" height="315" src="https://www.youtube.com/embed/LvJi2zqLvM8?si=lUrcrn_QLLeMovbN" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>`;
+  }
+  function playVideo2() {
+    let container = document.querySelector(".video-data2");
+    container.innerHTML = `<iframe width="560" height="315" src="https://www.youtube.com/embed/dBLezEMb5ow?si=EhFxpYign86bT9eZ" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>`;
+  }
+</script>
+<!-- Link JS Bootstrap 5 -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
