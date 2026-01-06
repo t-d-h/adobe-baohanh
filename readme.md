@@ -1,5 +1,9 @@
 https://docs.google.com/spreadsheets/d/1k1pJaZfGAge3WosopDuDVKyA96-9nhcJ7Qdfo-nqMHc/edit?gid=532295518#gid=532295518
 
+python3 -m venv venv
+source venv bin active
+pip install -r reqs.txt
+playwright install chromium
 
 
 
