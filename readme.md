@@ -10,12 +10,13 @@ Process:
 
 1, Check trong sheet USER_ACC (cột đầu xem có acc này k)
 
-2, Lấy email và pass khách gửi để đăng nhập, nếu có lỗi j như là sai pass hay otp thì báo khách liên hệ zalo. Potential errors:
+2, 
+Lấy email và pass khách gửi để đăng nhập, nếu có lỗi j như là sai pass hay otp thì báo khách liên hệ zalo. Potential errors:
     - otp
     - sai pass
     - captcha
 
-3, Đăng nhập xong ấn vào nút change email, điền vào awefad-{unixtime}@adbgetcode.site, bấm change, sleep 10s 
+Đăng nhập xong ấn vào nút change email, điền vào awefad-{unixtime}@adbgetcode.site, bấm change, sleep 10s 
 sau đó tool vào https://api.otp79s.com/api/codes để lấy verify code:
 VD change email thành awefad-343412341235@adbgetcode.site thì vào  https://api.otp79s.com/api/codes sẽ như này:
 {
@@ -52,6 +53,6 @@ lấy code (220047) điền vào, bấm Verify rồi tắt luôn trình duyệt 
 
 
 
-4, Tạo tài khoản mới với email khách gửi, thông tin random, pass Adobe@123.              Đã có code (reg_adobe.py)
+3, Tạo tài khoản mới với email khách nhập vào lúc đầy, thông tin random, pass Adobe@123.              Đã có code (reg_adobe.py)
 
-5, Add tài khoản mới vào admin, trả lại cho khách
+4, Add tài khoản mới vào admin, trả lại cho khách
