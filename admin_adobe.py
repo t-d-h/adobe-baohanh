@@ -87,6 +87,115 @@ def enter_otp(page, otp_code):
         page.locator(selector).fill(digit)
         time.sleep(0.2)
 
+
+def get_otp_from_otp79s(local_prefix, timeout=60, poll_interval=3):
+    """Poll the otp79s API for an OTP entry matching local_prefix.
+
+    The API response is expected to contain a key 'adobe-bs' with a list of
+    items like {"code":"220047","email":"awefad-343412341235",...}.
+    We match against the `email` field using the local_prefix (without domain).
+    Returns the code string on success, or empty string on timeout/failure.
+    """
+    url = "https://api.otp79s.com/api/codes"
+    end_time = time.time() + timeout
+    while time.time() < end_time:
+        try:
+            resp = requests.get(url, timeout=10)
+            data = resp.json()
+            entries = data.get('adobe-bs') or []
+            for item in entries:
+                try:
+                    if 'email' in item and local_prefix in item['email']:
+                        return str(item.get('code', ''))
+                except Exception:
+                    continue
+        except Exception:
+            pass
+        time.sleep(poll_interval)
+    return ""
+
+
+def change_email_and_verify(page, wait_after_change=10, otp_timeout=60):
+    """Automate changing Adobe account email to a temporary address and verify it.
+
+    Steps:
+    - Create a temporary local prefix awefad-{unixtime} and set email to
+      awefad-{unixtime}@adbgetcode.site
+    - Submit the change, wait a bit, poll otp79s for the code under 'adobe-bs'
+    - Enter OTP using existing `enter_otp` helper and attempt to confirm
+
+    Returns the OTP code on success, or empty string on failure.
+    """
+    local_prefix = f"awefad-{int(time.time())}"
+    temp_email = local_prefix + "@adbgetcode.site"
+
+    # Try common selectors to open change-email dialog and fill the new email
+    try:
+        # Click a button or link that contains 'Change email'
+        try:
+            page.locator('button:has-text("Change email")').click(timeout=5000)
+        except:
+            try:
+                page.locator('text=Change email').click(timeout=5000)
+            except:
+                pass
+
+        # Fill possible email input fields
+        # Try several selector patterns to be resilient to UI differences
+        selectors = ['input[type="email"]', 'input[name="email"]', 'input[data-id="ChangeEmail-Input"]']
+        filled = False
+        for sel in selectors:
+            try:
+                el = page.locator(sel)
+                el.wait_for(timeout=2000)
+                el.fill(temp_email)
+                filled = True
+                break
+            except:
+                continue
+
+        if not filled:
+            # As a last resort try any input inside a dialog
+            try:
+                page.locator('dialog input').first.fill(temp_email)
+            except:
+                return ""
+
+        # Click confirm/change button
+        try:
+            page.locator('button:has-text("Change")').click(timeout=2000)
+        except:
+            try:
+                page.locator('button[data-id="Page-PrimaryButton"]').click(timeout=2000)
+            except:
+                pass
+
+    except Exception:
+        return ""
+
+    # wait for external service to receive code
+    time.sleep(wait_after_change)
+
+    # Poll otp79s for the otp matching our local prefix
+    otp_code = get_otp_from_otp79s(local_prefix, timeout=otp_timeout)
+    if not otp_code:
+        return ""
+
+    # Enter OTP into page
+    try:
+        enter_otp(page, otp_code)
+        # Try to submit/verify
+        try:
+            page.locator('button:has-text("Verify")').click(timeout=2000)
+        except:
+            try:
+                page.locator('button[data-id="Page-PrimaryButton"]').click(timeout=2000)
+            except:
+                pass
+        return otp_code
+    except Exception:
+        return ""
+
 def login_adobe_playwright(row_num, account):
     try:
         email = account[0]
