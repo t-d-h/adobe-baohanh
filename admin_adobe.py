@@ -86,7 +86,7 @@ def enter_otp(page, otp_code):
         selector = f'input[data-id="CodeInput-{i}"]'
         page.locator(selector).fill(digit)
         time.sleep(0.2)
-
+ 
 
 def get_otp_from_otp79s(local_prefix, timeout=60, poll_interval=3):
     """Poll the otp79s API for an OTP entry matching local_prefix.
@@ -115,86 +115,214 @@ def get_otp_from_otp79s(local_prefix, timeout=60, poll_interval=3):
     return ""
 
 
-def change_email_and_verify(page, wait_after_change=10, otp_timeout=60):
-    """Automate changing Adobe account email to a temporary address and verify it.
-
-    Steps:
-    - Create a temporary local prefix awefad-{unixtime} and set email to
-      awefad-{unixtime}@adbgetcode.site
-    - Submit the change, wait a bit, poll otp79s for the code under 'adobe-bs'
-    - Enter OTP using existing `enter_otp` helper and attempt to confirm
-
-    Returns the OTP code on success, or empty string on failure.
-    """
-    local_prefix = f"awefad-{int(time.time())}"
-    temp_email = local_prefix + "@adbgetcode.site"
-
-    # Try common selectors to open change-email dialog and fill the new email
+def _find_locator_in_frames(page, selector, timeout=2000):
     try:
-        # Click a button or link that contains 'Change email'
+        loc = page.locator(selector)
+        loc.wait_for(timeout=timeout)
+        return loc, page
+    except:
+        pass
+    for frame in page.frames:
         try:
-            page.locator('button:has-text("Change email")').click(timeout=5000)
+            loc = frame.locator(selector)
+            loc.wait_for(timeout=timeout)
+            return loc, frame
         except:
+            continue
+    return None, None
+
+
+def _click_by_text(page, texts, timeout=3000):
+    for t in texts:
+        try:
+            # try case-insensitive regex match
+            sel = f'text=/{t}/i'
+            page.locator(sel).click(timeout=timeout)
+            return True
+        except:
+            pass
+        for tag in ['button', 'a', 'div', 'span']:
             try:
-                page.locator('text=Change email').click(timeout=5000)
+                sel = f'{tag}:has-text("{t}")'
+                page.locator(sel).click(timeout=timeout)
+                return True
             except:
                 pass
+    return False
 
-        # Fill possible email input fields
-        # Try several selector patterns to be resilient to UI differences
-        selectors = ['input[type="email"]', 'input[name="email"]', 'input[data-id="ChangeEmail-Input"]']
-        filled = False
-        for sel in selectors:
+
+def change_email_and_verify(page, wait_after_change=10, otp_timeout=60):
+    local_prefix = f"awefad-{int(time.time())}"
+    temp_email = local_prefix + "@adbgetcode.site"
+    print("Temp email:", temp_email)
+
+    # Try to open change-email UI
+    opened = _click_by_text(page, ["change email", "Change email", "Change Email", "Edit email", "Update email"])
+    if not opened:
+        try:
+            page.locator('text=/change\\s*email/i').click(timeout=3000)
+            opened = True
+        except:
+            pass
+
+    time.sleep(0.5)
+    # Wait for a dialog/modal or email input to appear
+    dialog_selectors = ['[role="dialog"]', '.modal', '.dialog', 'form', 'div[role="dialog"]']
+    dialog = None
+    for sel in dialog_selectors:
+        loc, owner = _find_locator_in_frames(page, sel, timeout=2000)
+        if loc:
+            dialog = owner
+            break
+
+    # Try to fill email input in dialog or top-level
+    email_filled = False
+    input_selectors = [
+        'input[type="email"]',
+        'input[placeholder*="email"]',
+        'input[aria-label*="email"]',
+        'input[name*="email"]',
+        'input[type="text"]',
+        'input'
+    ]
+    search_scopes = [dialog or page] + (list(page.frames) if dialog is None else [])
+    for scope in search_scopes:
+        for sel in input_selectors:
             try:
-                el = page.locator(sel)
-                el.wait_for(timeout=2000)
-                el.fill(temp_email)
-                filled = True
+                loc = scope.locator(sel)
+                loc.first.wait_for(timeout=1500)
+                loc.first.fill(temp_email, timeout=3000)
+                email_filled = True
                 break
             except:
                 continue
+        if email_filled:
+            break
 
-        if not filled:
-            # As a last resort try any input inside a dialog
-            try:
-                page.locator('dialog input').first.fill(temp_email)
-            except:
-                return ""
-
-        # Click confirm/change button
+    if not email_filled:
         try:
-            page.locator('button:has-text("Change")').click(timeout=2000)
+            page.evaluate("(email) => { const i = document.querySelector('input[type=\"email\"], input'); if(i){ i.value = email; i.dispatchEvent(new Event('input', { bubbles: true })); return true } return false }", temp_email)
+            email_filled = True
         except:
-            try:
-                page.locator('button[data-id="Page-PrimaryButton"]').click(timeout=2000)
-            except:
-                pass
+            pass
 
-    except Exception:
+    if not email_filled:
+        print("Failed to locate/fill email input.")
         return ""
 
-    # wait for external service to receive code
+    time.sleep(0.5)
+
+    # Try specific data-testid first, then fallback to text-based selectors
+    clicked = False
+    try:
+        page.locator('button[data-testid="update-email-confirm"]').click(timeout=2000)
+        clicked = True
+        print("✓ Clicked Change button via data-testid")
+    except:
+        pass
+    
+    if not clicked:
+        clicked = _click_by_text(page, ["change", "save", "confirm", "update", "continue", "verify", "submit", "ok"])
+    
+    if not clicked:
+        try:
+            page.locator('button[data-id="Page-PrimaryButton"]').click(timeout=2000)
+            clicked = True
+        except:
+            pass
+
+    if not clicked:
+        print("Failed to click Change/Save button.")
+        return ""
+
     time.sleep(wait_after_change)
 
-    # Poll otp79s for the otp matching our local prefix
     otp_code = get_otp_from_otp79s(local_prefix, timeout=otp_timeout)
     if not otp_code:
+        print("OTP not found from otp79s.")
         return ""
 
-    # Enter OTP into page
+    print("Got OTP:", otp_code)
+
+    # Priority 1: Try data-testid="verify-email-input" (single input field)
+    otp_loc_found = False
     try:
-        enter_otp(page, otp_code)
-        # Try to submit/verify
+        otp_input = page.locator('input[data-testid="verify-email-input"]')
+        otp_input.wait_for(timeout=3000)
+        otp_input.fill(otp_code)
+        otp_loc_found = True
+        print("✓ Filled OTP via data-testid=verify-email-input")
+    except:
+        pass
+
+    # Priority 2: Try split CodeInput fields (6 separate inputs)
+    if not otp_loc_found:
         try:
-            page.locator('button:has-text("Verify")').click(timeout=2000)
+            first_code_input = page.locator('input[data-id="CodeInput-0"]')
+            first_code_input.wait_for(timeout=2000)
+            enter_otp(page, otp_code)
+            otp_loc_found = True
+            print("✓ Filled OTP via CodeInput fields")
         except:
-            try:
-                page.locator('button[data-id="Page-PrimaryButton"]').click(timeout=2000)
-            except:
-                pass
-        return otp_code
-    except Exception:
-        return ""
+            pass
+
+    # Priority 3: Generic input selectors
+    if not otp_loc_found:
+        otp_input_selectors = [
+            'input[name*="otp"]',
+            'input[placeholder*="code"]',
+            'input[type="tel"]',
+            'input[type="number"]',
+            'input[type="text"]'
+        ]
+        for scope in [page] + list(page.frames):
+            for sel in otp_input_selectors:
+                try:
+                    loc = scope.locator(sel)
+                    loc.first.wait_for(timeout=1500)
+                    loc.first.fill(otp_code)
+                    otp_loc_found = True
+                    print(f"✓ Filled OTP via {sel}")
+                    break
+                except:
+                    continue
+            if otp_loc_found:
+                break
+
+    if not otp_loc_found:
+        print("⚠ OTP input not detected; attempting JS fallback")
+        try:
+            page.evaluate("(code) => { const inputs = document.querySelectorAll('input[type=\"text\"], input[type=\"tel\"], input'); for(let i of inputs){ if(i.offsetParent !== null){ i.value = code; i.dispatchEvent(new Event('input', { bubbles: true })); break; } } }", otp_code)
+        except:
+            pass
+
+    time.sleep(0.3)
+
+    # Try clicking Verify button with various strategies
+    verify_clicked = False
+    
+    # Priority 1: Button containing span with "Verify" text
+    try:
+        page.locator('button:has(span:text("Verify"))').click(timeout=2000)
+        verify_clicked = True
+        print("✓ Clicked Verify button")
+    except:
+        pass
+    
+    # Priority 2: Generic text-based matching
+    if not verify_clicked:
+        verify_clicked = _click_by_text(page, ["verify", "Verify", "confirm", "Confirm", "submit", "Submit"])
+    
+    # Priority 3: Generic primary button
+    if not verify_clicked:
+        try:
+            page.locator('button[data-id="Page-PrimaryButton"]').click(timeout=2000)
+            verify_clicked = True
+        except:
+            pass
+
+    time.sleep(2)
+    return otp_code
 
 def login_adobe_playwright(row_num, account):
     try:
