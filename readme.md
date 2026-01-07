@@ -61,6 +61,7 @@ Trong ví dụ trên, mã OTP cho email `awefad-343412341235` là `220047`.
 4) Tạo tài khoản mới với email người dùng cung cấp (sử dụng `reg_adobe.py`). Thông tin có thể được random; mặc định mật khẩu mẫu: `Adobe@123` (theo logic hiện có trong code).
 
 5) Thêm tài khoản mới vào Admin và cập nhật Google Sheets, rồi trả kết quả cho khách.
+https://www.notion.so/Web-b-o-h-nh-adobe-2e1eaa855ead808790a4f4468b84bcf0?showMoveTo=true&saveParent=true
 
 ## File chính và vai trò
 
