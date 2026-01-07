@@ -151,10 +151,26 @@ def _click_by_text(page, texts, timeout=3000):
     return False
 
 
-def change_email_and_verify(page, wait_after_change=10, otp_timeout=60):
-    local_prefix = f"awefad-{int(time.time())}"
+def change_email_and_verify(page, old_email=None, wait_after_change=10, otp_timeout=60):
+    """Change email with two-stage OTP verification.
+    
+    Args:
+        page: Playwright page object
+        old_email: Current email address (to get OTP sent to old email for confirmation)
+        wait_after_change: Seconds to wait after clicking Change before polling API
+        otp_timeout: Max seconds to wait for OTP from API
+    
+    Returns:
+        OTP code string on success, empty string on failure
+    """
+    local_prefix = f"awefad{int(time.time())}"
     temp_email = local_prefix + "@adbgetcode.site"
-    print("Temp email:", temp_email)
+    print("="*60)
+    print("[CHANGE EMAIL DEBUG]")
+    print(f"Old email: {old_email}")
+    print(f"Temp email: {temp_email}")
+    print(f"Local prefix for new email: {local_prefix}")
+    print("="*60)
 
     # Try to open change-email UI
     opened = _click_by_text(page, ["change email", "Change email", "Change Email", "Edit email", "Update email"])
@@ -175,39 +191,55 @@ def change_email_and_verify(page, wait_after_change=10, otp_timeout=60):
             dialog = owner
             break
 
-    # Try to fill email input in dialog or top-level
+    # Try to fill email input - Priority: data-testid first
     email_filled = False
-    input_selectors = [
-        'input[type="email"]',
-        'input[placeholder*="email"]',
-        'input[aria-label*="email"]',
-        'input[name*="email"]',
-        'input[type="text"]',
-        'input'
-    ]
-    search_scopes = [dialog or page] + (list(page.frames) if dialog is None else [])
-    for scope in search_scopes:
-        for sel in input_selectors:
-            try:
-                loc = scope.locator(sel)
-                loc.first.wait_for(timeout=1500)
-                loc.first.fill(temp_email, timeout=3000)
-                email_filled = True
+    
+    # Priority 1: Try data-testid="update-email-input"
+    try:
+        email_input = page.locator('input[data-testid="update-email-input"]')
+        email_input.wait_for(timeout=3000)
+        email_input.fill(temp_email)
+        email_filled = True
+        print("✓ Filled email via data-testid=update-email-input")
+    except:
+        pass
+    
+    # Priority 2: Generic email input selectors
+    if not email_filled:
+        input_selectors = [
+            'input[type="email"]',
+            'input[placeholder*="email"]',
+            'input[aria-label*="email"]',
+            'input[name*="email"]',
+            'input[type="text"]',
+            'input'
+        ]
+        search_scopes = [dialog or page] + (list(page.frames) if dialog is None else [])
+        for scope in search_scopes:
+            for sel in input_selectors:
+                try:
+                    loc = scope.locator(sel)
+                    loc.first.wait_for(timeout=1500)
+                    loc.first.fill(temp_email, timeout=3000)
+                    email_filled = True
+                    print(f"✓ Filled email via {sel}")
+                    break
+                except:
+                    continue
+            if email_filled:
                 break
-            except:
-                continue
-        if email_filled:
-            break
 
+    # Priority 3: JS fallback
     if not email_filled:
         try:
-            page.evaluate("(email) => { const i = document.querySelector('input[type=\"email\"], input'); if(i){ i.value = email; i.dispatchEvent(new Event('input', { bubbles: true })); return true } return false }", temp_email)
+            page.evaluate("(email) => { const i = document.querySelector('input[data-testid=\"update-email-input\"], input[type=\"email\"], input'); if(i){ i.value = email; i.dispatchEvent(new Event('input', { bubbles: true })); return true } return false }", temp_email)
             email_filled = True
+            print("✓ Filled email via JS fallback")
         except:
             pass
 
     if not email_filled:
-        print("Failed to locate/fill email input.")
+        print("✗ Failed to locate/fill email input.")
         return ""
 
     time.sleep(0.5)
@@ -232,17 +264,76 @@ def change_email_and_verify(page, wait_after_change=10, otp_timeout=60):
             pass
 
     if not clicked:
-        print("Failed to click Change/Save button.")
+        print("✗ Failed to click Change/Save button.")
         return ""
 
+    print("\n[STAGE 1: Verify OLD email]")
+    print("Waiting for OTP sent to old email...")
     time.sleep(wait_after_change)
 
+    # Stage 1: Get OTP sent to OLD email for confirmation
+    old_email_local = None
+    if old_email:
+        # Extract local part before @ for API lookup
+        if '@' in old_email:
+            old_email_local = old_email.split('@')[0]
+        else:
+            old_email_local = old_email
+        print(f"Looking for OTP with email prefix: {old_email_local}")
+        
+        old_otp = get_otp_from_otp79s(old_email_local, timeout=otp_timeout)
+        if old_otp:
+            print(f"✓ Got OTP for old email: {old_otp}")
+            
+            # Fill OTP for old email verification
+            otp_filled = False
+            try:
+                otp_input = page.locator('input[data-testid="verify-email-input"]')
+                otp_input.wait_for(timeout=3000)
+                otp_input.fill(old_otp)
+                otp_filled = True
+                print("✓ Filled OLD email OTP via data-testid=verify-email-input")
+            except:
+                # Try other input methods
+                try:
+                    first_code_input = page.locator('input[data-id="CodeInput-0"]')
+                    first_code_input.wait_for(timeout=2000)
+                    enter_otp(page, old_otp)
+                    otp_filled = True
+                    print("✓ Filled OLD email OTP via CodeInput fields")
+                except:
+                    print("⚠ Could not find OTP input for old email verification")
+            
+            if otp_filled:
+                time.sleep(0.5)
+                # Click Verify to proceed to new email confirmation
+                verify_clicked = False
+                try:
+                    page.locator('button:has(span:text("Verify"))').click(timeout=2000)
+                    verify_clicked = True
+                    print("✓ Clicked Verify for old email")
+                except:
+                    if not verify_clicked:
+                        verify_clicked = _click_by_text(page, ["verify", "Verify", "confirm", "Confirm", "submit", "Submit"])
+                
+                if verify_clicked:
+                    print("\n[STAGE 2: Verify NEW email]")
+                    print("Waiting for OTP sent to new temp email...")
+                    time.sleep(wait_after_change)
+        else:
+            print(f"⚠ No OTP found for old email: {old_email_local}")
+            print("Continuing to check for new email OTP...")
+    else:
+        print("⚠ No old_email provided, skipping Stage 1")
+
+    # Stage 2: Get OTP sent to NEW temp email
+    print(f"Looking for OTP with email prefix: {local_prefix}")
     otp_code = get_otp_from_otp79s(local_prefix, timeout=otp_timeout)
     if not otp_code:
-        print("OTP not found from otp79s.")
+        print("✗ OTP not found from otp79s for new email.")
         return ""
 
-    print("Got OTP:", otp_code)
+    print(f"✓ Got OTP for new email: {otp_code}")
 
     # Priority 1: Try data-testid="verify-email-input" (single input field)
     otp_loc_found = False
@@ -322,6 +413,10 @@ def change_email_and_verify(page, wait_after_change=10, otp_timeout=60):
             pass
 
     time.sleep(2)
+    print("="*60)
+    print("[SUCCESS] Email change completed!")
+    print(f"Final OTP returned: {otp_code}")
+    print("="*60)
     return otp_code
 
 def login_adobe_playwright(row_num, account):

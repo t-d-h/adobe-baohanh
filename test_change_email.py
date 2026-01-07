@@ -4,10 +4,30 @@ import admin_adobe
 with sync_playwright() as p:
     browser = p.chromium.launch(headless=False)
     page = browser.new_page()
-    # Thay URL/flow nếu cần: mở trang profile hoặc trang nơi có nút Change email
-    page.goto("https://account.adobe.com/")  # hoặc trang thích hợp
-    # Làm login thủ công trong cửa sổ (hoặc tự động hóa nếu bạn có selector/mật khẩu)
-    input("Login manually then press Enter here to continue...")
-    otp = admin_adobe.change_email_and_verify(page, wait_after_change=10, otp_timeout=60)
-    print("Returned OTP:", otp)
+    
+    page.goto("https://account.adobe.com/")
+    
+    # Làm login thủ công trong cửa sổ
+    print("\n" + "="*60)
+    print("INSTRUCTIONS:")
+    print("1. Login manually in the browser")
+    print("2. Make sure you're on the account page")
+    print("="*60)
+    old_email = input("Enter your CURRENT email (the one you're logged in with): ").strip()
+    
+    input("\nPress Enter to start email change process...")
+    
+    # Call with old_email parameter for two-stage verification
+    otp = admin_adobe.change_email_and_verify(
+        page, 
+        old_email=old_email,
+        wait_after_change=10, 
+        otp_timeout=60
+    )
+    
+    print("\n" + "="*60)
+    print(f"FINAL RESULT: {otp if otp else 'FAILED'}")
+    print("="*60)
+    
+    input("\nPress Enter to close browser...")
     browser.close()
