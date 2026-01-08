@@ -48,6 +48,15 @@ def login_adobe_account(email, password):
         except Exception:
             print("No 2FA detected, proceeding with login.")
 
+        # check xem con van de gi khac truoc khong truoc khi nhap password bang cach xem '#PasswordPage-PasswordField' co ton tai khong
+        try:
+            wait_short = WebDriverWait(driver, 5)
+            wait_short.until(EC.presence_of_element_located((By.CSS_SELECTOR, '#PasswordPage-PasswordField')))
+            print("No additional verification needed, proceeding to enter password.")
+        except Exception:
+            print("Co gi do khong dung, vui long lien he zalo ...")
+            return False
+
         # dien password
         wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, '#PasswordPage-PasswordField'))).send_keys(password)
         time.sleep(1)
