@@ -636,23 +636,38 @@ def add_user_to_admin_console(admin_account, user_email):
                 time.sleep(5)  # Longer wait if spinner detection failed
             
             # Click "Add as new user" option in dropdown
-            print("👤 Looking for 'Add as new user' option...")
+            print("👤 Looking for user in dropdown...")
             try:
-                # Wait for dropdown option to appear
-                add_new_user_span = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, 'span[data-testid="new-user-row"]')))
-                add_new_user_span.click()
                 time.sleep(1)
-                print("✓ Clicked 'Add as new user'")
-            except Exception as e:
-                print(f"⚠ Could not find new-user-row span: {e}")
-                # Try clicking the parent div role="option"
+                
+                # Check if user already exists in dropdown (not "Add as new user")
                 try:
-                    add_option = wait.until(EC.element_to_be_clickable((By.XPATH, "//div[@role='option' and contains(., 'Add as a new user')]")))
-                    driver.execute_script("arguments[0].click();", add_option)
+                    # Look for existing user option (contains email)
+                    existing_user = driver.find_element(By.XPATH, f"//div[@role='option' and contains(., '{user_email}') and not(contains(., 'Add as'))]")
+                    print(f"✓ Found existing user: {user_email}")
+                    existing_user.click()
                     time.sleep(1)
-                    print("✓ Clicked via JavaScript on option div")
-                except Exception as e2:
-                    print(f"⚠ All click attempts failed: {e2}")
+                    print("✓ Selected existing user")
+                except:
+                    # User doesn't exist, click "Add as new user"
+                    print("→ User not found, adding as new user...")
+                    try:
+                        add_new_user_span = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, 'span[data-testid="new-user-row"]')))
+                        add_new_user_span.click()
+                        time.sleep(1)
+                        print("✓ Clicked 'Add as new user'")
+                    except Exception as e:
+                        print(f"⚠ Could not find new-user-row span: {e}")
+                        # Try clicking the parent div role="option"
+                        try:
+                            add_option = wait.until(EC.element_to_be_clickable((By.XPATH, "//div[@role='option' and contains(., 'Add as a new user')]")))
+                            driver.execute_script("arguments[0].click();", add_option)
+                            time.sleep(1)
+                            print("✓ Clicked via JavaScript on option div")
+                        except Exception as e2:
+                            print(f"⚠ All click attempts failed: {e2}")
+            except Exception as e:
+                print(f"⚠ Error handling user dropdown: {e}")
             
             # Click Products button for User 1
             print("🎯 Clicking Products button...")

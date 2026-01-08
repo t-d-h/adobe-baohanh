@@ -285,11 +285,13 @@ def baohanh():
             sheet_adobe.update_cell(cell.row, 4, "Đã Xong")
             sheet_adobe.update_cell(cell.row, 5, user_email)  # Email của user
             
-            # Add account to trial (dùng email tạm từ row để add)
-            displayName = add_account(row_data[0])
+            # BỎ QUA add_account() để tránh lỗi "already completed free trial"
+            # User sẽ được add trực tiếp vào Admin Console ở bước 5
+            print("⚠ Skipping add_account() to avoid trial conflict")
+            displayName = "Pending"
             sheet_adobe.update_cell(cell.row, 6, displayName)
             
-            print(f"✓ Account created successfully with email: {user_email}")
+            print(f"✓ Account prepared for: {user_email}")
             
             # BƯỚC 5: Add user vào Admin Console
             print("[Bước 5] Adding to Admin Console...")
