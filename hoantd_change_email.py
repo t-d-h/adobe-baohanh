@@ -39,6 +39,15 @@ def login_adobe_account(email, password):
         driver.find_element(By.CSS_SELECTOR, 'button[data-id="EmailPage-ContinueButton"]').click()
         time.sleep(1)
 
+        # check xem no co bat 2FA khong bang cac xem data-id="CodeInput-0" co ton tai khong
+        try:
+            wait_short = WebDriverWait(driver, 5)
+            wait_short.until(EC.presence_of_element_located((By.CSS_SELECTOR, 'input[data-id="CodeInput-0"]')))
+            print("2FA detected, cannot proceed with login.")
+            return False
+        except Exception:
+            print("No 2FA detected, proceeding with login.")
+
         # dien password
         wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, '#PasswordPage-PasswordField'))).send_keys(password)
         time.sleep(1)
@@ -127,7 +136,7 @@ def login_adobe_account(email, password):
         except Exception:
             pass
 if __name__ == "__main__":
-    email = "adasdcasd1767869170@adbgetcode.site"
+    email = "adasdcasd1767869387@adbgetcode.site"
     password = "Abcd1234@"
     # register_adobe_account(email, password)
     login_adobe_account(email, password)
