@@ -4,32 +4,39 @@ import time
 import traceback
 from selenium import webdriver
 from selenium.webdriver.common.by import By
+from selenium.common.exceptions import SessionNotCreatedException
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from faker import Faker
 from datetime import datetime
+import undetected_chromedriver as uc
 # from google_sheet import sheet
-
 
 def register_adobe_account(email, password):
     driver = None
     try:
         fake = Faker()
 
-        # Start a fresh local Chrome browser instance instead of attaching to a
-        # remote profile. This launches a new browser controlled by chromedriver
-        # available on PATH (or configured by Selenium).
-        options = webdriver.ChromeOptions()
-        # Useful defaults; adjust as needed
-        options.add_argument('--no-sandbox')
-        options.add_argument('--disable-dev-shm-usage')
-        options.add_argument('--start-maximized')
-        # options.add_argument('--headless=new')  # uncomment if you want headless
-        driver = webdriver.Chrome(options=options)
-
+        if uc:
+            options = uc.ChromeOptions()
+            options.add_argument('--no-sandbox')
+            options.add_argument('--disable-dev-shm-usage')
+            options.add_argument('--start-maximized')
+            # options.add_argument('--headless=new')  # uncomment if you want headless
+            driver = uc.Chrome(options=options)
+            print("Using undetected_chromedriver for login.")
+        else:
+            options = webdriver.ChromeOptions()
+            options.add_argument('--no-sandbox')
+            options.add_argument('--disable-dev-shm-usage')
+            options.add_argument('--start-maximized')
+            # options.add_argument('--headless=new')  # uncomment if you want headless
+            driver = webdriver.Chrome(options=options)
+            print("Using regular selenium webdriver for login.")
         driver.get("https://account.adobe.com/vn")
         wait = WebDriverWait(driver, 60)
+
         
         # Nhấn vào nút "Create an account"
         create_account_btn = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, '#EmailForm > section.EmailPage__email-field.form-group.mt-0.mb-400 > p > span')))
@@ -100,42 +107,7 @@ def register_adobe_account(email, password):
             pass
         # No profile to stop when launching a fresh local browser
 
-def login_adobe_account(email, password):
-    driver = None
-    try:
-        # Start a fresh local Chrome browser instance instead of attaching to a
-        # remote profile. This launches a new browser controlled by chromedriver
-        # available on PATH (or configured by Selenium).
-        options = webdriver.ChromeOptions()
-        # Useful defaults; adjust as needed
-        options.add_argument('--no-sandbox')
-        options.add_argument('--disable-dev-shm-usage')
-        options.add_argument('--start-maximized')
-        # options.add_argument('--headless=new')  # uncomment if you want headless
-        driver = webdriver.Chrome(options=options)
-
-        driver.get("https://account.adobe.com/vn")
-        wait = WebDriverWait(driver, 60)
-
-        # Điền email
-        wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, '#EmailPage-EmailField'))).send_keys(email)
-        time.sleep(1)
-        # Bam vao nut Sign IN
-        driver.find_element(By.CSS_SELECTOR, '#react-aria-11').click()
-        time.sleep(10000)
-
-    except Exception as e:
-        print("Error in login_adobe_account:", e)
-        traceback.print_exc()
-        return False
-    finally:
-        try:
-            if driver:
-                driver.quit()
-        except Exception:
-            pass
 if __name__ == "__main__":
-    email = "gaasdfeth4gha@adbgetcode.site"
+    email = "hoanne@adbgetcode.site"
     password = "Abcd1234@"
-    # register_adobe_account(email, password)
-    login_adobe_account(email, password)
+    register_adobe_account(email, password)
