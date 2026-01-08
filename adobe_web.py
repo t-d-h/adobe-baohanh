@@ -8,6 +8,7 @@ import time
 import re
 import threading
 import admin_adobe
+from process_user_request import process_user_request
 
 app = Flask(__name__)
 app.secret_key = 'adobe-renew-web'
@@ -136,6 +137,17 @@ def search():
     displayName = add_account(row_data[0])
     sheet.update_cell(cell.row, 6, displayName)
 
+    # Bước 5: Add user email vào ADMIN account Creative Cloud Pro
+    print(f"\n[BƯỚC 5] Thêm user {email} vào Admin Console...")
+    try:
+        result_step5 = process_user_request(email)
+        if result_step5.get('status') == 'success':
+            print(f"✓ Bước 5 hoàn thành: {result_step5.get('message')}")
+        else:
+            print(f"⚠ Bước 5 có lỗi: {result_step5.get('message')}")
+    except Exception as e:
+        print(f"✗ Lỗi khi thực hiện bước 5: {e}")
+
     row_data = sheet.row_values(cell.row)
     # trả về kết quả
     result_data = {
@@ -183,6 +195,142 @@ def otp():
         session['otp'] = 'Mã OTP : ' + otp_code
         return redirect(url_for("index"))
 
+@app.route("/baohanh", methods=["GET", "POST"])
+def baohanh():
+    """
+    Bảo hành - Workflow đầy đủ bước 1-5.
+    
+    GET: Hiển thị form nhập email
+    POST: Check admin + bảo hành → Tạo account mới với email user + Adobe@123 → Add vào admin
+    """
+    if request.method == "POST":
+        user_email = request.form.get("email")
+        default_password = "Adobe@123"
+        
+        if not user_email:
+            session['message'] = "Vui lòng nhập email"
+            return redirect(url_for("baohanh"))
+        
+        print(f"\n{'='*80}")
+        print(f" BẢO HÀNH ADOBE - {user_email} ".center(80, "="))
+        print(f"{'='*80}\n")
+        
+        try:
+            # BƯỚC 0: Check admin account còn slot không
+            print("[Bước 0] Checking admin availability...")
+            sheet_admin = spreadsheet.worksheet("ADMIN_ACC")
+            admin_cell = sheet_admin.find("Hoạt Động", in_column=4)
+            
+            if not admin_cell:
+                session['message'] = "✗ Hết tài khoản admin, liên hệ shop qua zalo: 0876722439"
+                return redirect(url_for("baohanh"))
+            print("✓ Admin account available")
+            
+            # BƯỚC 1: Check email đã được bảo hành chưa (trong ADOBE_ACC)
+            print("[Bước 1] Checking warranty status...")
+            sheet_adobe = spreadsheet.worksheet("ADOBE_ACC")
+            cells = sheet_adobe.findall(user_email, in_column=5)
+            
+            warranty_active = False
+            if cells:
+                # Lấy row mới nhất
+                cell = max(cells, key=lambda c: c.row)
+                row_data = sheet_adobe.row_values(cell.row)
+                
+                # Check ngày tạo < 90 ngày (3 tháng)
+                date_format = "%Y-%m-%d %H:%M:%S"
+                date_from_data = datetime.strptime(row_data[2], date_format)
+                current_date = datetime.now()
+                days_difference = (current_date - date_from_data).days
+                
+                if days_difference < 90:
+                    days_remaining = 90 - days_difference
+                    warranty_active = True
+                    print(f"✓ Account còn bảo hành ({days_remaining} ngày còn lại, đã dùng {days_difference} ngày)")
+                else:
+                    print(f"✗ Account hết hạn bảo hành (đã dùng {days_difference} ngày)")
+            
+            if not warranty_active:
+                print("✓ Chưa có account hoặc hết hạn bảo hành")
+            
+            print("→ Tiếp tục tạo account mới...")
+            
+            # BƯỚC 2-4: Tạo account mới (tương tự route /search)
+            # Workflow: Lấy account tạm từ ADOBE_ACC → Move sang temp email → 
+            # Tạo lại account với email user + Adobe@123
+            print("[Bước 2-4] Creating new account...")
+            
+            # Tìm row "Tạo Mới" trong ADOBE_ACC
+            cell = sheet_adobe.find("Tạo Mới", in_column=4)
+            if not cell:
+                session['message'] = "✗ Không tìm thấy account khả dụng, liên hệ shop"
+                return redirect(url_for("baohanh"))
+            
+            row_data = sheet_adobe.row_values(cell.row)
+            
+            # Highlight row
+            row_range = f"A{cell.row}:F{cell.row}"
+            sheet_adobe.format(row_range, {
+                "backgroundColor": {
+                    "red": 0.8, "green": 1.0, "blue": 0.8
+                }
+            })
+            
+            # Login admin (background thread)
+            thread = threading.Thread(target=admin_adobe.start)
+            thread.start()
+            
+            # Update sheet: timestamp, status, USER EMAIL (không phải email từ sheet)
+            sheet_adobe.update_cell(cell.row, 3, datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+            sheet_adobe.update_cell(cell.row, 4, "Đã Xong")
+            sheet_adobe.update_cell(cell.row, 5, user_email)  # Email của user
+            
+            # Add account to trial (dùng email tạm từ row để add)
+            displayName = add_account(row_data[0])
+            sheet_adobe.update_cell(cell.row, 6, displayName)
+            
+            print(f"✓ Account created successfully with email: {user_email}")
+            
+            # BƯỚC 5: Add user vào Admin Console
+            print("[Bước 5] Adding to Admin Console...")
+            result_step5 = process_user_request(user_email)
+            
+            if result_step5.get('status') == 'success':
+                # Trả về email USER + password mặc định + admin profile
+                result_data = {
+                    "email": user_email,
+                    "password": default_password,
+                    "profile": result_step5.get('admin_profile', 'Unknown')
+                }
+                session['result'] = result_data
+                session['message'] = f"✓ Đã tạo tài khoản và thêm vào Admin Console: {result_step5.get('admin_profile')}"
+                print(f"\n{'='*80}")
+                print(" SUCCESS! ".center(80, "="))
+                print(f" Email: {user_email} | Password: {default_password} ".center(80))
+                print(f"{'='*80}\n")
+            else:
+                # Vẫn trả về thông tin account dù bước 5 lỗi
+                result_data = {
+                    "email": user_email,
+                    "password": default_password,
+                    "profile": "Unknown"
+                }
+                session['result'] = result_data
+                session['message'] = f"✓ Đã tạo tài khoản nhưng lỗi khi thêm vào Admin: {result_step5.get('message')}"
+        
+        except Exception as e:
+            print(f"✗ Error in baohanh: {e}")
+            import traceback
+            traceback.print_exc()
+            session['message'] = f"Lỗi: {str(e)}"
+        
+        return redirect(url_for("baohanh"))
+    
+    # GET request - hiển thị form
+    result = session.pop('result', None)
+    message = session.pop('message', None)
+    return render_template('baohanh.html', result=result, message=message)
+
 def add_account(email):
     sheet = spreadsheet.worksheet("ADMIN_ACC")
     cell = sheet.find("Hoạt Động", in_column=4)
@@ -203,14 +351,26 @@ def add_account(email):
         'Content-Type': 'application/x-www-form-urlencoded'
     }
     payload = 'client_id=ONESIE1&scope=openid%2CAdobeID%2Cadditional_info.projectedProductContext%2Cread_organizations%2Cread_members%2Cread_countries_regions%2Cadditional_info.roles%2Cadobeio_api%2Cread_auth_src_domains%2CauthSources.rwd%2Cbis.read.pi%2Capp_policies.read%2Capp_policies.write%2Cclient.read%2Cpublisher.read%2Cclient.scopes.read%2Ccreative_cloud%2Cservice_principals.write%2Caps.read.app_merchandising%2Caps.eval_licensesforapps%2Cab.manage%2Caps.device_activation_mgmt%2Cpps.read%2Cip_list_write_scope'
-    response = requests.post("https://adobeid-na1.services.adobe.com/ims/check/v6/token?jslVersion=v2-v0.31.0-2-g1e8a8a8", headers=headers, data=payload)
-    organizations = response.json()['roles'][0]['organization']
-    displayName = response.json()['displayName']
-    headers = {
-        'Authorization': 'Bearer '+response.json()['access_token'],
-        'X-Api-Key': 'ONESIE1',
-        'Content-Type': 'application/json'
-    }
+    
+    try:
+        response = requests.post("https://adobeid-na1.services.adobe.com/ims/check/v6/token?jslVersion=v2-v0.31.0-2-g1e8a8a8", headers=headers, data=payload)
+        
+        # Check response
+        response_data = response.json()
+        if 'roles' not in response_data or 'access_token' not in response_data:
+            print(f"⚠ Cookie không hợp lệ, bỏ qua add_account. Response: {response_data}")
+            return "Unknown"
+        
+        organizations = response_data['roles'][0]['organization']
+        displayName = response_data['displayName']
+        headers = {
+            'Authorization': 'Bearer '+response_data['access_token'],
+            'X-Api-Key': 'ONESIE1',
+            'Content-Type': 'application/json'
+        }
+    except Exception as e:
+        print(f"⚠ Error getting token from cookie: {e}. Skipping add_account...")
+        return "Unknown"
 
     # thêm email vào account
     response = requests.get("https://bps-il.adobe.io/jil-api/v2/organizations/"+organizations+"/products/?include_created_date=true&include_expired=true&include_groups_quantity=true&include_inactive=false&include_license_activations=true&include_license_allocation_info=false&includeAcquiredOfferIds=false&includeConfiguredProductArrangementId=false&includeLegacyLSFields=false&license_group_limit=100&processing_instruction_codes=administration", headers=headers)

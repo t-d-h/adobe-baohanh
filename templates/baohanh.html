@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bảo hành Adobe - Thêm User vào Admin Console</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+            text-align: center;
+        }
+        
+        .subtitle {
+            color: #666;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            color: #555;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+        
+        input[type="email"] {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+        
+        input[type="text"] {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+        
+        input[type="email"]:focus,
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        .message {
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+        
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .result-box {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .result-item:last-child {
+            border-bottom: none;
+        }
+        
+        .result-label {
+            font-weight: 600;
+            color: #555;
+        }
+        
+        .result-value {
+            color: #333;
+            word-break: break-all;
+        }
+        
+        .back-link {
+            display: block;
+            text-align: center;
+            margin-top: 20px;
+            color: #667eea;
+            text-decoration: none;
+            font-size: 14px;
+        }
+        
+        .back-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Bảo hành Adobe</h1>
+        <p class="subtitle">Tạo tài khoản mới và thêm vào Admin Console</p>
+        
+        {% if message %}
+        <div class="message {% if '✓' in message %}success{% else %}error{% endif %}">
+            {{ message }}
+        </div>
+        {% endif %}
+        
+        <form method="POST" action="/baohanh">
+            <div class="form-group">
+                <label for="email">Email khách hàng:</label>
+                <input 
+                    type="email" 
+                    id="email" 
+                    name="email" 
+                    placeholder="example@email.com"
+                    required
+                    autofocus
+                >
+                <small style="color: #999; display: block; margin-top: 5px;">
+                    Email này sẽ được tạo tài khoản Adobe mới với password: Adobe@123
+                </small>
+            </div>
+            
+            <button type="submit" class="btn">
+                Tạo tài khoản và thêm vào Admin Console
+            </button>
+        </form>
+        
+        {% if result %}
+        <div class="result-box">
+            <h3 style="margin-bottom: 15px; color: #333;">📋 Thông tin tài khoản</h3>
+            
+            <div class="result-item">
+                <span class="result-label">Email:</span>
+                <span class="result-value">{{ result.email }}</span>
+            </div>
+            
+            <div class="result-item">
+                <span class="result-label">Password:</span>
+                <span class="result-value">{{ result.password }}</span>
+            </div>
+            
+            <div class="result-item">
+                <span class="result-label">Admin Profile:</span>
+                <span class="result-value">{{ result.profile }}</span>
+            </div>
+        </div>
+        {% endif %}
+        
+        <a href="/" class="back-link">← Quay về trang chủ</a>
+    </div>
+</body>
+</html>
