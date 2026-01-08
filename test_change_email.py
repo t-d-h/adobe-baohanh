@@ -18,7 +18,7 @@ with sync_playwright() as p:
     input("\nPress Enter to start email change process...")
     
     # Call with old_email parameter for two-stage verification
-    otp = admin_adobe.change_email_and_verify(
+    otp = admin_adobe.user_adobe(
         page, 
         old_email=old_email,
         wait_after_change=10, 
