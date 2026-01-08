@@ -83,7 +83,7 @@ def register_adobe_account(email, password):
         # Nhấn nút đăng ký
         driver.find_element(By.CSS_SELECTOR, '#react-aria-182').click()
         # wait a short while for navigation to complete
-        time.sleep(5)
+        time.sleep(6)
         try:
             title = driver.title.strip()
         except Exception:
@@ -108,6 +108,6 @@ def register_adobe_account(email, password):
         # No profile to stop when launching a fresh local browser
 
 if __name__ == "__main__":
-    email = "hoanne@adbgetcode.site"
+    email = "gacc@adbgetcode.site"
     password = "Abcd1234@"
     register_adobe_account(email, password)

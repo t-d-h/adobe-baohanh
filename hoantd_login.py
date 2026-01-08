@@ -7,7 +7,6 @@ from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
-import admin_adobe
 from utils import get_otp_from_otp79s
 
 def login_adobe_account(email, password):
@@ -106,9 +105,16 @@ def login_adobe_account(email, password):
         wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, 'input[data-testid="verify-email-input"]'))).send_keys(trash_email_otp)
         driver.find_element(By.CSS_SELECTOR, 'button[data-testid="verify-email-confirm"]').click()
 
-        print("Email changed to trash email successfully:", trash_email)
-        time.sleep(1005)  # Giữ trình duyệt mở trong 5 giây để kiểm tra
-        return True
+        # Check if verification succeeded by waiting for the title to disappear
+        time.sleep(1)
+        try:
+            wait_short = WebDriverWait(driver, 10)
+            wait_short.until(EC.invisibility_of_element_located((By.CSS_SELECTOR, '[data-testid="verify-email-title"]')))
+            print("Email changed to trash email successfully:", trash_email)
+            return True
+        except Exception:
+            print("Email verification failed - title still present")
+            return False
     except Exception as e:
         print("Error in login_adobe_account:", e)
         traceback.print_exc()
@@ -121,7 +127,7 @@ def login_adobe_account(email, password):
         except Exception:
             pass
 if __name__ == "__main__":
-    email = "adasdcasd1767868574@adbgetcode.site"
+    email = "adasdcasd1767869170@adbgetcode.site"
     password = "Abcd1234@"
     # register_adobe_account(email, password)
     login_adobe_account(email, password)
