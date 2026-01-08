@@ -91,7 +91,16 @@ def get_available_admin_account():
         if cell:
             row_data = sheet.row_values(cell.row)
             print(f"✓ Found available Admin account at row {cell.row}: {row_data[0]}")
-            quantity = int(row_data[2]) if len(row_data) > 2 and row_data[2] else 0
+            
+            # Parse quantity with default value of 1 (minimum)
+            try:
+                quantity_raw = row_data[2] if len(row_data) > 2 else ''
+                quantity = int(quantity_raw) if quantity_raw and str(quantity_raw).strip() else 1
+                # Ensure minimum of 1
+                quantity = max(1, quantity)
+            except (ValueError, IndexError):
+                quantity = 1
+            
             profile = row_data[5] if len(row_data) > 5 else ''
             
             return {
