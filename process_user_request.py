@@ -414,6 +414,7 @@ def add_user_to_admin_console(admin_account, user_email):
         dict with status, profile_name, message
     """
     driver = None
+    admin_profile_name = None  # Biến lưu tên profile của admin
     try:
         print("\n" + "="*60)
         print("[BƯỚC 5: ADD USER TO ADMIN CONSOLE]")
@@ -488,14 +489,55 @@ def add_user_to_admin_console(admin_account, user_email):
         except:
             print("✓ No popup")
         
+        # Get admin profile name from page
+        print("[7/9] Getting admin profile name...")
+        try:
+            # Wait for page to fully load
+            time.sleep(2)
+            
+            # Try multiple selectors for profile name in header (top right corner)
+            admin_profile_name = None
+            selectors = [
+                # Header navigation area where name appears
+                "//div[contains(@class, 'navbar') or contains(@class, 'header')]//button//span[string-length(text()) > 3]",
+                "//header//button//span[contains(@class, 'label') or contains(@class, 'Label')]",
+                "//button[contains(@aria-label, 'account') or contains(@aria-label, 'profile')]//span",
+                # Direct text search in header area
+                "//div[@id='header' or @class='header']//span[string-length(text()) > 5 and string-length(text()) < 50]",
+                # Look for any span in navigation that looks like a name (has space, not too long)
+                "//span[contains(text(), ' ') and string-length(text()) > 5 and string-length(text()) < 30]",
+            ]
+            
+            for selector in selectors:
+                try:
+                    elements = driver.find_elements(By.XPATH, selector)
+                    for elem in elements:
+                        text = elem.text.strip()
+                        # Check if looks like a name (has space, reasonable length, not a common UI text)
+                        if text and ' ' in text and 5 < len(text) < 30:
+                            # Exclude common UI texts
+                            if text.lower() not in ['learn more', 'quick links', 'buy more', 'add users', 'add admins', 'take a tour', 'take the tour']:
+                                admin_profile_name = text
+                                print(f"✓ Admin profile name: {admin_profile_name}")
+                                break
+                    if admin_profile_name:
+                        break
+                except Exception as e:
+                    continue
+            
+            if not admin_profile_name:
+                print("⚠ Could not find profile name, using email prefix")
+                admin_profile_name = admin_account['email'].split('@')[0]
+        except Exception as e:
+            print(f"⚠ Error getting profile name: {e}")
+            admin_profile_name = admin_account['email'].split('@')[0]  # Fallback
+        
         # DEBUG: Save HTML and screenshot
-        print("[7/9] Saving debug files...")
         try:
             html_content = driver.page_source
             with open('admin_console_debug.html', 'w', encoding='utf-8') as f:
                 f.write(html_content)
             driver.save_screenshot('admin_console_debug.png')
-            print("✓ Saved: admin_console_debug.html and admin_console_debug.png")
         except Exception as e:
             print(f"⚠ Could not save debug files: {e}")
         
@@ -575,13 +617,14 @@ def add_user_to_admin_console(admin_account, user_email):
             print("⏳ Waiting for email validation...")
             try:
                 # Wait for the CircleLoader to disappear
-                wait_spinner = WebDriverWait(driver, 15)
+                wait_spinner = WebDriverWait(driver, 20)
                 wait_spinner.until(EC.invisibility_of_element_located((By.CSS_SELECTOR, '.YO3Nla_spectrum-Textfield-circleLoader')))
-                time.sleep(2)
+                print("✓ CircleLoader disappeared")
+                time.sleep(3)  # Extra wait for dropdown to populate
                 print("✓ Email validation complete")
             except Exception as e:
-                print(f"⚠ Loading spinner still visible or not found: {e}")
-                time.sleep(3)
+                print(f"⚠ Loading spinner timeout: {e}")
+                time.sleep(5)  # Longer wait if spinner detection failed
             
             # Click "Add as new user" option in dropdown
             print("👤 Looking for 'Add as new user' option...")
@@ -662,9 +705,16 @@ def add_user_to_admin_console(admin_account, user_email):
             sheet.update_cell(admin_account['row'], 3, new_quantity)  # Column C
             print(f"✓ Updated quantity: {admin_account['quantity']} -> {new_quantity}")
             
-            # Update Profile column with user email
-            sheet.update_cell(admin_account['row'], 6, user_email)  # Column F
-            print(f"✓ Updated Profile with user email: {user_email}")
+            # Update Profile column ONLY if empty (chỉ chạy 1 lần)
+            current_profile = admin_account.get('profile', '').strip()
+            if not current_profile:
+                if admin_profile_name:
+                    sheet.update_cell(admin_account['row'], 6, admin_profile_name)  # Column F
+                    print(f"✓ Updated Profile with admin name: {admin_profile_name}")
+                else:
+                    print("⚠ Could not get admin profile name, skipping profile update")
+            else:
+                print(f"✓ Profile already set: {current_profile}, skipping update")
             
             # Check if admin is full (>= 10 users)
             if new_quantity >= 10:
@@ -673,7 +723,7 @@ def add_user_to_admin_console(admin_account, user_email):
             
             return {
                 'status': 'success',
-                'profile_name': admin_account['email'],
+                'profile_name': admin_profile_name or admin_account['email'],
                 'message': f'User added to admin console'
             }
             
