@@ -67,7 +67,6 @@ def change_email_to_trash(email, password):
         # Bam vao nut Continue
         driver.find_element(By.CSS_SELECTOR, 'button[data-id="PasswordPage-ContinueButton"]').click()
 
-        time.sleep(1)
         time.sleep(999999999)
     except Exception as e:
         print("Error during change_email_to_trash:", str(e))
@@ -78,6 +77,6 @@ def change_email_to_trash(email, password):
             driver.quit()  
 
 if __name__ == "__main__":
-    test_email = "ergwaertgs@adbgetcode.site"
+    test_email = "gcaef249456@adbgetcode.site"
     test_password = "Abcd1234@"
     change_email_to_trash(test_email, test_password)

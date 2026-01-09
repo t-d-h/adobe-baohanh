@@ -241,6 +241,27 @@ def baohanh():
             print("✓ Email found in warranty list")
             print("→ Tiếp tục tạo account mới...")
 
+            # 1.1 Check xem thời hạn bảo hành còn không bằng cách xem cột B của USER_ACC
+            row_data = sheet_adobe.row_values(user_cell.row)
+            warranty_date_str = row_data[1]  # cột B
+            warranty_date = datetime.strptime(warranty_date_str, "%d/%m/%Y")
+            current_date = datetime.now()
+            if current_date > warranty_date:
+                session['message'] = "✗ Thời hạn bảo hành đã hết, liên hệ shop qua zalo: 0876722439"
+                return redirect(url_for("baohanh"))
+            # 1.2 Check xem user có bảo hành lần nào trong vòng 14 ngày không bằng cách xem cột C (lần bảo hành cuối)
+            # nếu cột c trống thì bỏ qua
+            if len(row_data) < 3:
+                print("✓ No previous warranty found, proceeding...")
+            else:
+                last_warranty_str = row_data[2]  # cột C
+                if last_warranty_str:
+                    last_warranty_date = datetime.strptime(last_warranty_str, "%d/%m/%Y")
+                    days_since_last_warranty = (current_date - last_warranty_date).days
+                    if days_since_last_warranty < 14:
+                        session['message'] = f"✗ Tài khoản đã được bảo hành gần đây ({days_since_last_warranty} ngày trước)"
+                        return redirect(url_for("baohanh"))
+
             # Bước 2: thay acc này sang email rác:
             if not change_email_to_trash(user_email, user_password):
                 session['message'] = "✗ Có lỗi khi đăng nhập vào tài khoản của bạn, vui lòng check lại các thông tin sau đây:<br>- Email/mật khẩu đã đúng<br>- Đã tắt tính năng đăng nhập bằng APP/OTP<br>- Email đã được xác thực"
@@ -268,6 +289,9 @@ def baohanh():
                 print(" SUCCESS! ".center(80, "="))
                 print(f" Email: {user_email} | Password: {user_password} ".center(80))
                 print(f"{'='*80}\n")
+
+                # update lần bảo hành cuối trong USER_ACC
+                sheet_adobe.update_cell(user_cell.row, 3, current_date.strftime("%d/%m/%Y"))
             else:
                 # Vẫn trả về thông tin account dù bước 4 lỗi
                 result_data = {
