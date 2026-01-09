@@ -155,3 +155,6 @@ lấy code (220047) điền vào, bấm Verify rồi tắt luôn trình duyệt 
 3, Tạo tài khoản mới với email khách nhập vào lúc đầy, thông tin random, pass Adobe@123.              Đã có code (reg_adobe.py)
 
 4, Add tài khoản mới vào admin, trả lại cho khách
+
+
+fix loi khong chay dc multilple browser: https://github.com/ultrafunkamsterdam/undetected-chromedriver/issues/1051#issuecomment-1423625612

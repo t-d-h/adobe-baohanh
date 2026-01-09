@@ -9,12 +9,16 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from utils import get_otp_from_otp79s
 
+import tempfile
+import random
 def change_email_to_trash(email, password):
     driver = None
     try:
         ############################################# login ###########################################33
         if uc:
             options = uc.ChromeOptions()
+            options.add_argument(f"--user-data-dir={tempfile.mkdtemp()}")
+            options.add_argument(f"--remote-debugging-port={random.randint(40000,50000)}")
             options.add_argument('--no-sandbox')
             options.add_argument('--disable-dev-shm-usage')
             options.add_argument('--start-maximized')
@@ -74,6 +78,6 @@ def change_email_to_trash(email, password):
             driver.quit()  
 
 if __name__ == "__main__":
-    test_email = "gcaef249456@adbgetcode.site"
+    test_email = "ergwaertgs@adbgetcode.site"
     test_password = "Abcd1234@"
     change_email_to_trash(test_email, test_password)
