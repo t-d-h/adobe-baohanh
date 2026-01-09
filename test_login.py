@@ -77,6 +77,6 @@ def change_email_to_trash(email, password):
             driver.quit()  
 
 if __name__ == "__main__":
-    test_email = "ergwaertgs@adbgetcode.site"
+    test_email = "gcaef249456@adbgetcode.site"
     test_password = "Abcd1234@"
     change_email_to_trash(test_email, test_password)
