@@ -19,7 +19,7 @@ def change_email_to_trash(email, password):
             options.add_argument('--disable-dev-shm-usage')
             options.add_argument('--start-maximized')
             # options.add_argument('--headless=new')  # uncomment if you want headless
-            options.binary_location = r"C:\Users\Administrator\Downloads\GoogleChromePortable"
+            options.binary_location = r"C:\Users\Administrator\Downloads\GoogleChromePortable\GoogleChromePortable.exe"
             driver = uc.Chrome(options=options)
             print("Using undetected_chromedriver for login.")
         else:
@@ -27,7 +27,7 @@ def change_email_to_trash(email, password):
             options.add_argument('--no-sandbox')
             options.add_argument('--disable-dev-shm-usage')
             options.add_argument('--start-maximized')
-            options.binary_location = r"C:\Users\Administrator\Downloads\GoogleChromePortable"
+            options.binary_location = r"C:\Users\Administrator\Downloads\GoogleChromePortable\GoogleChromePortable.exe"
             # options.add_argument('--headless=new')  # uncomment if you want headless
             driver = webdriver.Chrome(options=options)
             print("Using regular selenium webdriver for login.")
