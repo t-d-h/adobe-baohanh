@@ -136,7 +136,6 @@ def change_email_to_trash(email, password):
     except Exception as e:
         print("Error in change_email_to_trash:", e)
         traceback.print_exc()
-        time.sleep(100000)
         return False
     finally:
         try:

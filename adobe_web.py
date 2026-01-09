@@ -224,7 +224,7 @@ def baohanh():
             admin_cell = sheet_admin.find("Hoạt Động", in_column=4)
             
             if not admin_cell:
-                session['message'] = "✗ Hết tài khoản admin, liên hệ shop qua zalo: 0876722439"
+                session['message'] = "✗ Hệ thống tạm thời hết tài khoản, liên hệ shop qua zalo: 0876722439"
                 return redirect(url_for("baohanh"))
             print("✓ Admin account available")
             
@@ -243,7 +243,7 @@ def baohanh():
 
             # Bước 2: thay acc này sang email rác:
             if not change_email_to_trash(user_email, user_password):
-                session['message'] = "✗ Có lỗi khi đăng nhập vào tài khoản của bạn, vui lòng check lại email/mật khẩu và tắt tính năng đăng nhập bằng APP/OTP và thử lại."
+                session['message'] = "✗ Có lỗi khi đăng nhập vào tài khoản của bạn, vui lòng check lại các thông tin sau đây:<br>- Email/mật khẩu đã đúng<br>- Đã tắt tính năng đăng nhập bằng APP/OTP<br>- Email đã được xác thực"
                 return redirect(url_for("baohanh"))
 
             # Bước 3: Đăng ký lại account Adobe với email user + password cũ

@@ -792,7 +792,7 @@ def process_user_request(user_email):
     if not admin_acc:
         return {
             'status': 'error',
-            'message': 'Hết tài khoản admin, liên hệ shop qua zalo: 0876722439'
+            'message': 'Hệ thống tạm thời hết tài khoản, liên hệ shop qua zalo: 0876722439'
         }
     
     print(f"\n[Adding {user_email} to {admin_acc['email']}...]")

@@ -226,7 +226,7 @@
         
         {% if message %}
         <div class="message {% if '✓' in message %}success{% else %}error{% endif %}">
-            {{ message }}
+            {{ message|safe }}
         </div>
         {% endif %}
         
@@ -253,9 +253,13 @@
                     id="password"
                     name="password"
                     placeholder="Nhập mật khẩu tài khoản Adobe của bạn"
+                    required
                 >
             </div>
             
+            <!-- client-side inline error message -->
+            <div id="client-error" class="message error" style="display:none; margin-bottom:16px;"></div>
+
             <button type="submit" class="btn">
                 Bảo hành
             </button>
@@ -318,7 +322,35 @@
 
             if (form) {
                 form.addEventListener('submit', function(e) {
-                    // Show overlay immediately; allow normal submit to continue
+                    var emailEl = form.querySelector('[name="email"]');
+                    var passEl = form.querySelector('[name="password"]');
+                    var clientError = document.getElementById('client-error');
+                    var email = emailEl ? emailEl.value.trim() : '';
+                    var pass = passEl ? passEl.value.trim() : '';
+
+                    // Client-side required validation with Vietnamese messages
+                    if (!email || !pass) {
+                        e.preventDefault();
+                        if (clientError) {
+                            if (!email && !pass) {
+                                clientError.textContent = 'Vui lòng nhập email và mật khẩu';
+                            } else if (!email) {
+                                clientError.textContent = 'Vui lòng nhập email';
+                            } else {
+                                clientError.textContent = 'Vui lòng nhập mật khẩu';
+                            }
+                            clientError.style.display = 'block';
+                        } else {
+                            alert(!email ? 'Vui lòng nhập email' : 'Vui lòng nhập mật khẩu');
+                        }
+                        // focus first empty
+                        if (!email && emailEl) emailEl.focus();
+                        else if (!pass && passEl) passEl.focus();
+                        return;
+                    }
+
+                    // hide client error and proceed
+                    if (clientError) clientError.style.display = 'none';
                     showOverlay();
                 });
             }

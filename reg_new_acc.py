@@ -108,6 +108,7 @@ def register_adobe_account(email, password):
         # No profile to stop when launching a fresh local browser
 
 if __name__ == "__main__":
-    email = "gcahffas@adbgetcode.site"
+    import random
+    email =  f"gcaef{random.randint(100000, 999999)}@adbgetcode.site"
     password = "Abcd1234@"
     register_adobe_account(email, password)
