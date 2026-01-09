@@ -144,7 +144,7 @@ def login_customer_and_change_email(customer_email, customer_password):
         options.add_argument('--no-sandbox')
         options.add_argument('--disable-dev-shm-usage')
         options.add_argument('--start-maximized')
-        
+        options.binary_location = r"C:\Users\Administrator\Downloads\GoogleChromePortable"
         driver = uc.Chrome(options=options, use_subprocess=True, version_main=None)
         wait = WebDriverWait(driver, 60)
         
