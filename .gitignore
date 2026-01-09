@@ -1,2 +1,3 @@
 venv
-./login.json
+login.json
+__pycache__
