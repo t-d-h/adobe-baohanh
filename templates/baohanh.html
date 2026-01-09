@@ -196,6 +196,23 @@
             font-size: 20px;
         }
 
+        /* Important note / screenshot styles */
+        .important-note {
+            background: #fff8e6;
+            border-left: 4px solid #ffb74d;
+            padding: 14px 16px;
+            border-radius: 10px;
+            margin-bottom: 18px;
+            color: #3a3a3a;
+        }
+
+        .important-note h3 {
+            margin: 0 0 6px 0;
+            font-size: 15px;
+            color: #333;
+        }
+
+
         .overlay p {
             color: #444;
             margin-bottom: 8px;
@@ -223,6 +240,18 @@
     <div class="container">
         <h1>🔧 Bảo hành Adobe</h1>
         <p class="subtitle">Bảo hành, add lại bản quyền vào tài khoản lỗi</p>
+
+        <div class="important-note" role="note" aria-live="polite">
+            <h3>Lưu ý quan trọng: bạn phải xác thực email trước khi bảo hành</h3>
+            <p style="margin:0; color:#444; font-size:14px;">
+                Để kiểm tra email đã xác thực chưa, vào
+                <a href="https://account.adobe.com/profile" target="_blank" rel="noopener noreferrer">https://account.adobe.com/profile</a>, nhìn dòng
+                <strong>Primary email (Adobe ID)</strong>.
+            </p>
+            <p style="margin:0; color:#444; font-size:14px;">
+                Nếu thấy chữ <em>Verified</em> bên dưới email, tức là đã xác thực. Nếu không có, bạn cần xác thực email trước khi bảo hành.
+            </p>
+        </div>
         
         {% if message %}
         <div class="message {% if '✓' in message %}success{% else %}error{% endif %}">
