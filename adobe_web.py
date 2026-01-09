@@ -9,7 +9,8 @@ import re
 import threading
 import admin_adobe
 from process_user_request import process_user_request
-
+from reg_new_acc import register_adobe_account
+from change_email import change_email_to_trash
 app = Flask(__name__)
 app.secret_key = 'adobe-renew-web'
 creds = Credentials.from_service_account_file("login.json", scopes=[
@@ -205,7 +206,8 @@ def baohanh():
     """
     if request.method == "POST":
         user_email = request.form.get("email")
-        default_password = "Adobe@123"
+        user_password = request.form.get("password")
+        # default_password = "Adobe@123"
         
         if not user_email:
             session['message'] = "Vui lòng nhập email"
@@ -226,99 +228,55 @@ def baohanh():
                 return redirect(url_for("baohanh"))
             print("✓ Admin account available")
             
-            # BƯỚC 1: Check email đã được bảo hành chưa (trong ADOBE_ACC)
+
+            # BƯỚC 1: Check email có trong danh sách bảo hành không (USER_ACC)
             print("[Bước 1] Checking warranty status...")
-            sheet_adobe = spreadsheet.worksheet("ADOBE_ACC")
-            cells = sheet_adobe.findall(user_email, in_column=5)
-            
-            warranty_active = False
-            if cells:
-                # Lấy row mới nhất
-                cell = max(cells, key=lambda c: c.row)
-                row_data = sheet_adobe.row_values(cell.row)
-                
-                # Check ngày tạo < 90 ngày (3 tháng)
-                date_format = "%Y-%m-%d %H:%M:%S"
-                date_from_data = datetime.strptime(row_data[2], date_format)
-                current_date = datetime.now()
-                days_difference = (current_date - date_from_data).days
-                
-                if days_difference < 90:
-                    days_remaining = 90 - days_difference
-                    warranty_active = True
-                    print(f"✓ Account còn bảo hành ({days_remaining} ngày còn lại, đã dùng {days_difference} ngày)")
-                else:
-                    print(f"✗ Account hết hạn bảo hành (đã dùng {days_difference} ngày)")
-            
-            if not warranty_active:
-                print("✓ Chưa có account hoặc hết hạn bảo hành")
-            
+            sheet_adobe = spreadsheet.worksheet("USER_ACC")
+
+            # check if this email is on the A collumn
+            user_cell = sheet_adobe.find(user_email, in_column=1)
+            if not user_cell:
+                session['message'] = "✗ Email không có trong danh sách bảo hành, liên hệ shop qua zalo: 0876722439"
+                return redirect(url_for("baohanh")) 
+            print("✓ Email found in warranty list")
             print("→ Tiếp tục tạo account mới...")
-            
-            # BƯỚC 2-4: Tạo account mới (tương tự route /search)
-            # Workflow: Lấy account tạm từ ADOBE_ACC → Move sang temp email → 
-            # Tạo lại account với email user + Adobe@123
-            print("[Bước 2-4] Creating new account...")
-            
-            # Tìm row "Tạo Mới" trong ADOBE_ACC
-            cell = sheet_adobe.find("Tạo Mới", in_column=4)
-            if not cell:
-                session['message'] = "✗ Không tìm thấy account khả dụng, liên hệ shop"
+
+            # Bước 2: thay acc này sang email rác:
+            if not change_email_to_trash(user_email, user_password):
+                session['message'] = "✗ Có lỗi khi đăng nhập vào tài khoản của bạn, vui lòng check lại email/mật khẩu và tắt tính năng đăng nhập bằng APP/OTP và thử lại."
                 return redirect(url_for("baohanh"))
-            
-            row_data = sheet_adobe.row_values(cell.row)
-            
-            # Highlight row
-            row_range = f"A{cell.row}:F{cell.row}"
-            sheet_adobe.format(row_range, {
-                "backgroundColor": {
-                    "red": 0.8, "green": 1.0, "blue": 0.8
-                }
-            })
-            
-            # Login admin (background thread)
-            thread = threading.Thread(target=admin_adobe.start)
-            thread.start()
-            
-            # Update sheet: timestamp, status, USER EMAIL (không phải email từ sheet)
-            sheet_adobe.update_cell(cell.row, 3, datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-            sheet_adobe.update_cell(cell.row, 4, "Đã Xong")
-            sheet_adobe.update_cell(cell.row, 5, user_email)  # Email của user
-            
-            # BỎ QUA add_account() để tránh lỗi "already completed free trial"
-            # User sẽ được add trực tiếp vào Admin Console ở bước 5
-            print("⚠ Skipping add_account() to avoid trial conflict")
-            displayName = "Pending"
-            sheet_adobe.update_cell(cell.row, 6, displayName)
-            
+
+            # Bước 3: Đăng ký lại account Adobe với email user + password cũ
+            if not register_adobe_account(user_email, user_password):
+                session['message'] = "✗ Lỗi khi tạo tài khoản Adobe mới, vui lòng liên hệ shop qua zalo: 0876722439"
+                return redirect(url_for("baohanh"))
             print(f"✓ Account prepared for: {user_email}")
             
-            # BƯỚC 5: Add user vào Admin Console
-            print("[Bước 5] Adding to Admin Console...")
-            result_step5 = process_user_request(user_email)
-            
-            if result_step5.get('status') == 'success':
+            # BƯỚC 4: Add user vào Admin Console
+            print("[Bước 4 ] Adding to Admin Console...")
+            result_step4 = process_user_request(user_email)
+            if result_step4.get('status') == 'success':
                 # Trả về email USER + password mặc định + admin profile
                 result_data = {
                     "email": user_email,
-                    "password": default_password,
-                    "profile": result_step5.get('admin_profile', 'Unknown')
+                    "password": user_password,
+                    "profile": result_step4.get('admin_profile', 'Unknown')
                 }
                 session['result'] = result_data
-                session['message'] = f"✓ Đã tạo tài khoản và thêm vào Admin Console: {result_step5.get('admin_profile')}"
+                session['message'] = f"✓ Đã hoàn thành bảo hành tài khoản Adobe. Vui lòng đăng nhập và kiểm tra lại bằng thông tin bên dưới."
                 print(f"\n{'='*80}")
                 print(" SUCCESS! ".center(80, "="))
-                print(f" Email: {user_email} | Password: {default_password} ".center(80))
+                print(f" Email: {user_email} | Password: {user_password} ".center(80))
                 print(f"{'='*80}\n")
             else:
-                # Vẫn trả về thông tin account dù bước 5 lỗi
+                # Vẫn trả về thông tin account dù bước 4 lỗi
                 result_data = {
                     "email": user_email,
-                    "password": default_password,
+                    "password": user_password,
                     "profile": "Unknown"
                 }
                 session['result'] = result_data
-                session['message'] = f"✓ Đã tạo tài khoản nhưng lỗi khi thêm vào Admin: {result_step5.get('message')}"
+                session['message'] = f"✓ Đã tạo lại tài khoản nhưng lỗi khi thêm vào Admin: {result_step4.get('message')}, vui lòng liên hệ shop qua zalo: 0876722439"
         
         except Exception as e:
             print(f"✗ Error in baohanh: {e}")

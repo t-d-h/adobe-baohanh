@@ -9,7 +9,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from utils import get_otp_from_otp79s
 
-def login_adobe_account(email, password):
+def change_email_to_trash(email, password):
     driver = None
     try:
         ############################################# login ###########################################33
@@ -134,7 +134,7 @@ def login_adobe_account(email, password):
             print("Email verification failed - title still present")
             return False
     except Exception as e:
-        print("Error in login_adobe_account:", e)
+        print("Error in change_email_to_trash:", e)
         traceback.print_exc()
         time.sleep(100000)
         return False
@@ -148,4 +148,4 @@ if __name__ == "__main__":
     email = "adasdcasd1767869387@adbgetcode.site"
     password = "Abcd1234@"
     # register_adobe_account(email, password)
-    login_adobe_account(email, password)
+    change_email_to_trash(email, password)

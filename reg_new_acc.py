@@ -90,7 +90,7 @@ def register_adobe_account(email, password):
             title = ''
 
         if title == "Adobe Account":
-            print("finish")
+            print(f"Account registered successfully: {email} | {password}")
             return True
         else:
             print("Unexpected page title:", title)
@@ -108,6 +108,6 @@ def register_adobe_account(email, password):
         # No profile to stop when launching a fresh local browser
 
 if __name__ == "__main__":
-    email = "gacc@adbgetcode.site"
+    email = "gcahffas@adbgetcode.site"
     password = "Abcd1234@"
     register_adobe_account(email, password)
