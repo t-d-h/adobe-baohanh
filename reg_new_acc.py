@@ -104,6 +104,20 @@ def register_adobe_account(email, password):
         create_account_btn.click()
         random_delay(1, 2)
 
+        # Check for anti-bot "Sign in again" button
+        try:
+            print("Checking for anti-bot detection...")
+            wait_short = WebDriverWait(driver, 3)
+            sign_in_again_btn = wait_short.until(EC.presence_of_element_located((By.XPATH, "//button[contains(., 'Sign in again')]")))
+            print("⚠ Anti-bot detected! Clicking 'Sign in again'...")
+            move_to_element(driver, sign_in_again_btn)
+            sign_in_again_btn.click()
+            random_delay(2, 3)
+            print("✓ Clicked 'Sign in again', continuing...")
+        except:
+            print("✓ No anti-bot detection, proceeding normally")
+            pass
+
         # Random thông tin
         first_name = fake.first_name()
         last_name = fake.last_name()

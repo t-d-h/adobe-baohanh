@@ -107,6 +107,20 @@ def change_email_to_trash(email, password):
         continue_btn.click()
         random_delay(1, 2)
 
+        # Check for anti-bot "Sign in again" button
+        try:
+            print("Checking for anti-bot detection...")
+            wait_short = WebDriverWait(driver, 3)
+            sign_in_again_btn = wait_short.until(EC.presence_of_element_located((By.XPATH, "//button[contains(., 'Sign in again')]")))
+            print("⚠ Anti-bot detected! Clicking 'Sign in again'...")
+            move_to_element(driver, sign_in_again_btn)
+            sign_in_again_btn.click()
+            random_delay(2, 3)
+            print("✓ Clicked 'Sign in again', continuing...")
+        except:
+            print("✓ No anti-bot detection, proceeding normally")
+            pass
+
         # check xem no co bat 2FA khong bang cac xem data-id="CodeInput-0" co ton tai khong
         try:
             wait_short = WebDriverWait(driver, 5)

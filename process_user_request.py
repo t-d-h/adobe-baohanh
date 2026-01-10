@@ -501,6 +501,20 @@ def add_user_to_admin_console(admin_account, user_email):
         continue_btn.click()
         random_delay(2, 4)
         
+        # Check for anti-bot "Sign in again" button
+        try:
+            print("[DEBUG] Checking for anti-bot detection...")
+            wait_short = WebDriverWait(driver, 3)
+            sign_in_again_btn = wait_short.until(EC.presence_of_element_located((By.XPATH, "//button[contains(., 'Sign in again')]")))
+            print("⚠ Anti-bot detected! Clicking 'Sign in again'...")
+            move_to_element(sign_in_again_btn)
+            sign_in_again_btn.click()
+            random_delay(2, 4)
+            print("✓ Clicked 'Sign in again', continuing...")
+        except:
+            print("✓ No anti-bot detection, proceeding normally")
+            pass
+        
         # Fill admin password
         print("[3/8] Filling admin password...")
         password_field = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, '#PasswordPage-PasswordField')))
