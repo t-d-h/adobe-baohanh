@@ -1,16 +1,43 @@
 import undetected_chromedriver as uc
 import time
 import traceback
+import tempfile
+import random
 
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
+from selenium.webdriver.common.action_chains import ActionChains
 from utils import get_otp_from_otp79s
 
-import tempfile
-import random
+# Try to import selenium-stealth for anti-detection
+try:
+    from selenium_stealth import stealth
+    STEALTH_AVAILABLE = True
+except ImportError:
+    STEALTH_AVAILABLE = False
+    print("⚠️ selenium-stealth not installed. Run: pip install selenium-stealth")
+
+def random_delay(min_sec=1, max_sec=3):
+    """Random delay to simulate human behavior"""
+    time.sleep(random.uniform(min_sec, max_sec))
+
+def human_type(element, text, min_delay=0.05, max_delay=0.15):
+    """Type text character by character with random delays"""
+    for char in text:
+        element.send_keys(char)
+        time.sleep(random.uniform(min_delay, max_delay))
+
+def move_to_element(driver, element):
+    """Move mouse to element before interaction"""
+    try:
+        ActionChains(driver).move_to_element(element).perform()
+        random_delay(0.3, 0.7)
+    except:
+        pass
+
 def change_email_to_trash(email, password):
     driver = None
     try:
@@ -24,6 +51,22 @@ def change_email_to_trash(email, password):
             options.add_argument('--start-maximized')
             # options.add_argument('--headless=new')  # uncomment if you want headless
             driver = uc.Chrome(options=options)
+            
+            # Apply stealth mode
+            if STEALTH_AVAILABLE:
+                try:
+                    stealth(driver,
+                        languages=["en-US", "en"],
+                        vendor="Google Inc.",
+                        platform="Win32",
+                        webgl_vendor="Intel Inc.",
+                        renderer="Intel Iris OpenGL Engine",
+                        fix_hairline=True
+                    )
+                    print("✓ Stealth mode enabled (UC Chrome)")
+                except Exception as e:
+                    print(f"⚠ Stealth mode failed: {e}")
+            
             print("Using undetected_chromedriver for login.")
         else:
             options = webdriver.ChromeOptions()
@@ -32,16 +75,37 @@ def change_email_to_trash(email, password):
             options.add_argument('--start-maximized')
             # options.add_argument('--headless=new')  # uncomment if you want headless
             driver = webdriver.Chrome(options=options)
+            
+            # Apply stealth mode
+            if STEALTH_AVAILABLE:
+                try:
+                    stealth(driver,
+                        languages=["en-US", "en"],
+                        vendor="Google Inc.",
+                        platform="Win32",
+                        webgl_vendor="Intel Inc.",
+                        renderer="Intel Iris OpenGL Engine",
+                        fix_hairline=True
+                    )
+                    print("✓ Stealth mode enabled (Regular Chrome)")
+                except Exception as e:
+                    print(f"⚠ Stealth mode failed: {e}")
+            
             print("Using regular selenium webdriver for login.")
         driver.get("https://account.adobe.com/vn")
         wait = WebDriverWait(driver, 60)
 
         # Điền email
-        wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, '#EmailPage-EmailField'))).send_keys(email)
-        time.sleep(1)
+        email_field = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, '#EmailPage-EmailField')))
+        move_to_element(driver, email_field)
+        human_type(email_field, email)
+        random_delay(0.5, 1.5)
+        
         # Bam vao nut Sign IN
-        driver.find_element(By.CSS_SELECTOR, 'button[data-id="EmailPage-ContinueButton"]').click()
-        time.sleep(1)
+        continue_btn = driver.find_element(By.CSS_SELECTOR, 'button[data-id="EmailPage-ContinueButton"]')
+        move_to_element(driver, continue_btn)
+        continue_btn.click()
+        random_delay(1, 2)
 
         # check xem no co bat 2FA khong bang cac xem data-id="CodeInput-0" co ton tai khong
         try:
@@ -62,10 +126,15 @@ def change_email_to_trash(email, password):
             return False
 
         # dien password
-        wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, '#PasswordPage-PasswordField'))).send_keys(password)
-        time.sleep(1)
+        password_field = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, '#PasswordPage-PasswordField')))
+        move_to_element(driver, password_field)
+        human_type(password_field, password)
+        random_delay(0.5, 1.5)
+        
         # Bam vao nut Continue
-        driver.find_element(By.CSS_SELECTOR, 'button[data-id="PasswordPage-ContinueButton"]').click()
+        password_btn = driver.find_element(By.CSS_SELECTOR, 'button[data-id="PasswordPage-ContinueButton"]')
+        move_to_element(driver, password_btn)
+        password_btn.click()
 
         time.sleep(999999999)
     except Exception as e:

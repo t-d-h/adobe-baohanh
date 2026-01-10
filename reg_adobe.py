@@ -4,6 +4,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.action_chains import ActionChains
 from faker import Faker
 import gspread
 import requests
@@ -16,6 +17,32 @@ import shutil
 from datetime import datetime
 import concurrent.futures
 import re
+
+# Try to import selenium-stealth for anti-detection
+try:
+    from selenium_stealth import stealth
+    STEALTH_AVAILABLE = True
+except ImportError:
+    STEALTH_AVAILABLE = False
+    print("⚠️ selenium-stealth not installed. Run: pip install selenium-stealth")
+
+def random_delay(min_sec=1, max_sec=3):
+    """Random delay to simulate human behavior"""
+    time.sleep(random.uniform(min_sec, max_sec))
+
+def human_type(element, text, min_delay=0.05, max_delay=0.15):
+    """Type text character by character with random delays"""
+    for char in text:
+        element.send_keys(char)
+        time.sleep(random.uniform(min_delay, max_delay))
+
+def move_to_element(driver, element):
+    """Move mouse to element before interaction"""
+    try:
+        ActionChains(driver).move_to_element(element).perform()
+        random_delay(0.3, 0.7)
+    except:
+        pass
 
 creds = Credentials.from_service_account_file("login.json", scopes=[
     "https://www.googleapis.com/auth/spreadsheets",
@@ -139,13 +166,30 @@ def register_adobe_account():
         service = Service(driver_path)
         driver = webdriver.Chrome(service=service, options=options)
         
+        # Apply stealth mode
+        if STEALTH_AVAILABLE:
+            try:
+                stealth(driver,
+                    languages=["en-US", "en"],
+                    vendor="Google Inc.",
+                    platform="Win32",
+                    webgl_vendor="Intel Inc.",
+                    renderer="Intel Iris OpenGL Engine",
+                    fix_hairline=True
+                )
+                print("✓ Stealth mode enabled")
+            except Exception as e:
+                print(f"⚠ Stealth mode failed: {e}")
+        
         driver.get("https://account.adobe.com/vn")
         
         wait = WebDriverWait(driver, 20)
         
         # Nhấn vào nút "Create an account"
         create_account_btn = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, 'a[data-id="EmailPage-CreateAccountLink"]')))
+        move_to_element(driver, create_account_btn)
         create_account_btn.click()
+        random_delay(1, 2)
         
         # Random thông tin
         first_name = fake.first_name()
@@ -154,31 +198,58 @@ def register_adobe_account():
         birth_year = str(random.randint(1980, 2005))
         
         # Điền thông tin đăng ký
-        wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, '#Signup-EmailField'))).send_keys(email.replace('indigobook.com','gmail.com'))
-        time.sleep(1)
-        driver.find_element(By.CSS_SELECTOR, '#Signup-PasswordField').send_keys(password)
-        time.sleep(1)
-        driver.find_element(By.CSS_SELECTOR, 'button[data-id="Signup-CreateAccountBtn"]').click()
+        email_field = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, '#Signup-EmailField')))
+        move_to_element(driver, email_field)
+        human_type(email_field, email.replace('indigobook.com','gmail.com'))
+        random_delay(0.5, 1.5)
         
-        wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, '#Signup-FirstNameField'))).send_keys(first_name)
-        driver.find_element(By.CSS_SELECTOR, '#Signup-LastNameField').send_keys(last_name)
-        time.sleep(1)
+        password_field = driver.find_element(By.CSS_SELECTOR, '#Signup-PasswordField')
+        move_to_element(driver, password_field)
+        human_type(password_field, password)
+        random_delay(0.5, 1.5)
+        
+        create_btn = driver.find_element(By.CSS_SELECTOR, 'button[data-id="Signup-CreateAccountBtn"]')
+        move_to_element(driver, create_btn)
+        create_btn.click()
+        random_delay(2, 3)
+        
+        first_name_field = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, '#Signup-FirstNameField')))
+        move_to_element(driver, first_name_field)
+        human_type(first_name_field, first_name)
+        random_delay(0.5, 1)
+        
+        last_name_field = driver.find_element(By.CSS_SELECTOR, '#Signup-LastNameField')
+        move_to_element(driver, last_name_field)
+        human_type(last_name_field, last_name)
+        random_delay(0.5, 1)
 
         # Chọn ngày, tháng, năm sinh
-        driver.find_element(By.CSS_SELECTOR, '#Signup-DateOfBirthChooser-Month').click()
-        time.sleep(1)
+        month_dropdown = driver.find_element(By.CSS_SELECTOR, '#Signup-DateOfBirthChooser-Month')
+        move_to_element(driver, month_dropdown)
+        month_dropdown.click()
+        random_delay(0.5, 1)
         months = driver.find_elements(By.CSS_SELECTOR, ".spectrum-Menu-item")
         if 0 < int(birth_month) <= len(months):
-            months[int(birth_month)].click()
-        time.sleep(1)
-        driver.find_element(By.CSS_SELECTOR, 'input[data-id="Signup-DateOfBirthChooser-Year"]').send_keys(birth_year)
+            month_option = months[int(birth_month)]
+            move_to_element(driver, month_option)
+            month_option.click()
+        random_delay(0.5, 1)
+        
+        year_field = driver.find_element(By.CSS_SELECTOR, 'input[data-id="Signup-DateOfBirthChooser-Year"]')
+        move_to_element(driver, year_field)
+        human_type(year_field, birth_year)
+        random_delay(0.5, 1)
         
         # Chấp nhận điều khoản
-        driver.find_element(By.CSS_SELECTOR, 'input[data-id="Explicit-Checkbox"]').click()
-        time.sleep(1)
+        terms_checkbox = driver.find_element(By.CSS_SELECTOR, 'input[data-id="Explicit-Checkbox"]')
+        move_to_element(driver, terms_checkbox)
+        terms_checkbox.click()
+        random_delay(0.5, 1)
         
         # Nhấn nút đăng ký
-        driver.find_element(By.CSS_SELECTOR, 'button[data-id="Signup-CreateAccountBtn"]').click()
+        signup_btn = driver.find_element(By.CSS_SELECTOR, 'button[data-id="Signup-CreateAccountBtn"]')
+        move_to_element(driver, signup_btn)
+        signup_btn.click()
 
         try:
             WebDriverWait(driver, 60).until(EC.presence_of_element_located((By.CSS_SELECTOR, ".account-profile-change-email")))
