@@ -13,11 +13,21 @@ import undetected_chromedriver as uc
 import time
 import traceback
 import requests
+import random
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.common.action_chains import ActionChains
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
+
+# Try to import selenium-stealth
+try:
+    from selenium_stealth import stealth
+    STEALTH_AVAILABLE = True
+except ImportError:
+    print("⚠ selenium-stealth not installed. Install: pip install selenium-stealth")
+    STEALTH_AVAILABLE = False
 from faker import Faker
 import random
 from datetime import datetime
@@ -438,41 +448,80 @@ def add_user_to_admin_console(admin_account, user_email):
         options.add_argument('--start-maximized')
         
         driver = uc.Chrome(options=options, use_subprocess=True, version_main=None)
+        
+        # Apply stealth mode to bypass fingerprint detection
+        if STEALTH_AVAILABLE:
+            print("🥷 Applying stealth mode...")
+            stealth(driver,
+                languages=["en-US", "en"],
+                vendor="Google Inc.",
+                platform="Win32",
+                webgl_vendor="Intel Inc.",
+                renderer="Intel Iris OpenGL Engine",
+                fix_hairline=True,
+                run_on_insecure_origins=False,
+            )
+            print("✓ Stealth mode enabled")
+        
+        def random_delay(min_sec=1, max_sec=3):
+            """Add human-like random delay"""
+            time.sleep(random.uniform(min_sec, max_sec))
+        
+        def human_type(element, text, min_delay=0.05, max_delay=0.15):
+            """Type text with human-like delays"""
+            for char in text:
+                element.send_keys(char)
+                time.sleep(random.uniform(min_delay, max_delay))
+        
+        def move_to_element(element):
+            """Move mouse to element with random curve"""
+            try:
+                actions = ActionChains(driver)
+                actions.move_to_element(element).perform()
+                random_delay(0.3, 0.7)
+            except:
+                pass
+        
         wait = WebDriverWait(driver, 60)
         
         # Navigate to admin console
         print("[1/8] Navigating to adminconsole.adobe.com...")
         driver.get("https://adminconsole.adobe.com/")
-        time.sleep(3)
+        random_delay(2, 4)
         
         # Fill admin email
         print("[2/8] Filling admin email...")
         email_field = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, '#EmailPage-EmailField')))
-        email_field.send_keys(admin_account['email'])
-        time.sleep(1)
+        move_to_element(email_field)
+        human_type(email_field, admin_account['email'])
+        random_delay(0.5, 1.5)
         
         continue_btn = driver.find_element(By.CSS_SELECTOR, 'button[data-id="EmailPage-ContinueButton"]')
+        move_to_element(continue_btn)
         continue_btn.click()
-        time.sleep(2)
+        random_delay(2, 4)
         
         # Fill admin password
         print("[3/8] Filling admin password...")
         password_field = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, '#PasswordPage-PasswordField')))
-        password_field.send_keys(admin_account['password'])
-        time.sleep(1)
+        move_to_element(password_field)
+        human_type(password_field, admin_account['password'])
+        random_delay(0.5, 1.5)
         
         password_btn = driver.find_element(By.CSS_SELECTOR, 'button[data-id="PasswordPage-ContinueButton"]')
+        move_to_element(password_btn)
         password_btn.click()
-        time.sleep(3)
+        random_delay(2, 4)
         
         # Check for 2nd email skip option
         print("[4/9] Checking for 2nd email request...")
         try:
             wait_short = WebDriverWait(driver, 5)
             skip_2nd_email_btn = wait_short.until(EC.element_to_be_clickable((By.CSS_SELECTOR, 'button[data-id="PP-AddSecondaryEmail-skip-btn"]')))
+            move_to_element(skip_2nd_email_btn)
             skip_2nd_email_btn.click()
             print("✓ Skipped 2nd email request (Not now)")
-            time.sleep(2)
+            random_delay(1, 2)
         except:
             print("✓ No 2nd email request")
         
@@ -481,9 +530,10 @@ def add_user_to_admin_console(admin_account, user_email):
         try:
             wait_short = WebDriverWait(driver, 5)
             skip_btn = wait_short.until(EC.element_to_be_clickable((By.XPATH, "//button[contains(text(), 'Skip')]")))
+            move_to_element(skip_btn)
             skip_btn.click()
             print("✓ Skipped phone verification")
-            time.sleep(2)
+            random_delay(1, 2)
         except:
             print("✓ No phone verification needed")
         
@@ -492,9 +542,10 @@ def add_user_to_admin_console(admin_account, user_email):
         try:
             wait_short = WebDriverWait(driver, 5)
             close_btn = wait_short.until(EC.element_to_be_clickable((By.CSS_SELECTOR, 'button[aria-label="Close"]')))
+            move_to_element(close_btn)
             close_btn.click()
             print("✓ Closed popup")
-            time.sleep(1)
+            random_delay(0.5, 1)
         except:
             print("✓ No popup")
         
@@ -502,7 +553,7 @@ def add_user_to_admin_console(admin_account, user_email):
         print("[7/9] Getting admin profile name...")
         try:
             # Wait for page to fully load
-            time.sleep(2)
+            random_delay(1, 2)
             
             # Try multiple selectors for profile name in header (top right corner)
             admin_profile_name = None
@@ -554,19 +605,20 @@ def add_user_to_admin_console(admin_account, user_email):
         print("[8/9] Navigating to Users...")
         try:
             # Wait for page to load
-            time.sleep(3)
+            random_delay(2, 3)
             
             # Try to find and click Users link in sidebar/navigation
             try:
                 users_link = wait.until(EC.element_to_be_clickable((By.XPATH, "//a[contains(., 'Users') or contains(@href, '/users')]")))
+                move_to_element(users_link)
                 users_link.click()
                 print("✓ Clicked Users link")
-                time.sleep(3)
+                random_delay(2, 3)
             except:
                 # Direct navigation as fallback
                 print("⚠ Trying direct navigation to users page...")
                 driver.get("https://adminconsole.adobe.com/users")
-                time.sleep(3)
+                random_delay(2, 3)
         except Exception as e:
             print(f"✗ Error navigating to Users: {e}")
             return {'status': 'error', 'message': 'Không thể mở trang Users trong Admin Console'}
@@ -577,9 +629,10 @@ def add_user_to_admin_console(admin_account, user_email):
             # Close any vex-overlay that might be blocking
             try:
                 vex_close = driver.find_element(By.CSS_SELECTOR, '.vex-close')
+                move_to_element(vex_close)
                 vex_close.click()
                 print("✓ Closed vex overlay")
-                time.sleep(1)
+                random_delay(0.5, 1)
             except:
                 pass
             
@@ -588,13 +641,14 @@ def add_user_to_admin_console(admin_account, user_email):
             
             # Try regular click first
             try:
+                move_to_element(add_user_btn)
                 add_user_btn.click()
             except:
                 # If blocked by overlay, use JavaScript click
                 print("⚠ Regular click blocked, using JavaScript...")
                 driver.execute_script("arguments[0].click();", add_user_btn)
             
-            time.sleep(2)
+            random_delay(1, 2)
             
             # DEBUG: Save HTML and screenshot of add user popup
             try:
@@ -612,15 +666,17 @@ def add_user_to_admin_console(admin_account, user_email):
                 print("⏳ Waiting for popup to load...")
                 wait_spinner = WebDriverWait(driver, 10)
                 wait_spinner.until(EC.invisibility_of_element_located((By.CSS_SELECTOR, '[data-testid="panel-wait"]')))
-                time.sleep(1)
+                random_delay(0.5, 1)
             except:
                 pass
             
             # Fill email in User 1 field (first input)
             print(f"📧 Filling email: {user_email}")
             user_email_field = wait.until(EC.presence_of_element_located((By.ID, 'textfield-email-5')))
+            move_to_element(user_email_field)
             user_email_field.clear()
-            user_email_field.send_keys(user_email)
+            random_delay(0.2, 0.5)
+            human_type(user_email_field, user_email)
             
             # Wait for loading spinner in input field to disappear
             print("⏳ Waiting for email validation...")
@@ -629,32 +685,34 @@ def add_user_to_admin_console(admin_account, user_email):
                 wait_spinner = WebDriverWait(driver, 20)
                 wait_spinner.until(EC.invisibility_of_element_located((By.CSS_SELECTOR, '.YO3Nla_spectrum-Textfield-circleLoader')))
                 print("✓ CircleLoader disappeared")
-                time.sleep(3)  # Extra wait for dropdown to populate
+                random_delay(2, 3)  # Extra wait for dropdown to populate
                 print("✓ Email validation complete")
             except Exception as e:
                 print(f"⚠ Loading spinner timeout: {e}")
-                time.sleep(5)  # Longer wait if spinner detection failed
+                random_delay(4, 5)  # Longer wait if spinner detection failed
             
             # Click "Add as new user" option in dropdown
             print("👤 Looking for user in dropdown...")
             try:
-                time.sleep(1)
+                random_delay(0.5, 1)
                 
                 # Check if user already exists in dropdown (not "Add as new user")
                 try:
                     # Look for existing user option (contains email)
                     existing_user = driver.find_element(By.XPATH, f"//div[@role='option' and contains(., '{user_email}') and not(contains(., 'Add as'))]")
                     print(f"✓ Found existing user: {user_email}")
+                    move_to_element(existing_user)
                     existing_user.click()
-                    time.sleep(1)
+                    random_delay(0.5, 1)
                     print("✓ Selected existing user")
                 except:
                     # User doesn't exist, click "Add as new user"
                     print("→ User not found, adding as new user...")
                     try:
                         add_new_user_span = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, 'span[data-testid="new-user-row"]')))
+                        move_to_element(add_new_user_span)
                         add_new_user_span.click()
-                        time.sleep(1)
+                        random_delay(0.5, 1)
                         print("✓ Clicked 'Add as new user'")
                     except Exception as e:
                         print(f"⚠ Could not find new-user-row span: {e}")
@@ -662,7 +720,7 @@ def add_user_to_admin_console(admin_account, user_email):
                         try:
                             add_option = wait.until(EC.element_to_be_clickable((By.XPATH, "//div[@role='option' and contains(., 'Add as a new user')]")))
                             driver.execute_script("arguments[0].click();", add_option)
-                            time.sleep(1)
+                            random_delay(0.5, 1)
                             print("✓ Clicked via JavaScript on option div")
                         except Exception as e2:
                             print(f"⚠ All click attempts failed: {e2}")
@@ -672,8 +730,9 @@ def add_user_to_admin_console(admin_account, user_email):
             # Click Products button for User 1
             print("🎯 Clicking Products button...")
             products_btn = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, 'button[data-testid="assignment-modal-open-button"]')))
+            move_to_element(products_btn)
             products_btn.click()
-            time.sleep(2)
+            random_delay(1, 2)
             
             # DEBUG: Save products selection popup
             try:
@@ -691,16 +750,18 @@ def add_user_to_admin_console(admin_account, user_email):
             try:
                 # Find and click Creative Cloud Pro checkbox or card
                 cc_pro_element = wait.until(EC.element_to_be_clickable((By.XPATH, "//span[contains(text(), 'Creative Cloud') and contains(text(), 'Pro')] | //div[contains(text(), 'Creative Cloud Pro')]")))
+                move_to_element(cc_pro_element)
                 cc_pro_element.click()
-                time.sleep(1)
+                random_delay(0.5, 1)
                 print("✓ Selected Creative Cloud Pro")
             except Exception as e:
                 print(f"⚠ Error selecting Creative Cloud Pro: {e}")
                 # Try alternative selector
                 try:
                     cc_element = driver.find_element(By.XPATH, "//span[contains(text(), 'Creative Cloud')]")
+                    move_to_element(cc_element)
                     cc_element.click()
-                    time.sleep(1)
+                    random_delay(0.5, 1)
                 except:
                     pass
             
@@ -708,16 +769,18 @@ def add_user_to_admin_console(admin_account, user_email):
             print("✅ Clicking Apply...")
             try:
                 apply_btn = wait.until(EC.element_to_be_clickable((By.XPATH, "//button[.//span[contains(text(), 'Apply')]]")))
+                move_to_element(apply_btn)
                 apply_btn.click()
-                time.sleep(2)
+                random_delay(1, 2)
             except Exception as e:
                 print(f"⚠ Error clicking Apply: {e}")
             
             # Click Save button
             print("💾 Clicking Save...")
             save_btn = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, 'button[data-testid="cta-button"]')))
+            move_to_element(save_btn)
             save_btn.click()
-            time.sleep(3)
+            random_delay(2, 3)
             
             print(f"✓ User {user_email} added to Creative Cloud Pro!")
             
