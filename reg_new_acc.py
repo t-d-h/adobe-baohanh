@@ -39,6 +39,22 @@ def move_to_element(driver, element):
     except:
         pass
 
+def check_and_handle_antibot(driver):
+    """Check for anti-bot 'Sign in again' button and click if present"""
+    try:
+        print("Checking for anti-bot detection...")
+        wait_short = WebDriverWait(driver, 5)
+        sign_in_again_btn = wait_short.until(EC.element_to_be_clickable((By.CSS_SELECTOR, 'button[data-id="ErrorPage-Continue"]')))
+        print("⚠ Anti-bot detected! Clicking 'Sign in again'...")
+        move_to_element(driver, sign_in_again_btn)
+        sign_in_again_btn.click()
+        random_delay(2, 3)
+        print("✓ Clicked 'Sign in again', continuing...")
+        return True
+    except:
+        print("✓ No anti-bot detection, proceeding normally")
+        return False
+
 def register_adobe_account(email, password):
     driver = None
     try:
@@ -96,6 +112,10 @@ def register_adobe_account(email, password):
             print("Using regular selenium webdriver for login.")
         driver.get("https://account.adobe.com/vn")
         wait = WebDriverWait(driver, 60)
+        random_delay(2, 3)
+        
+        # Check for anti-bot right after page load
+        check_and_handle_antibot(driver)
 
         
         # Nhấn vào nút "Create an account"
@@ -104,19 +124,8 @@ def register_adobe_account(email, password):
         create_account_btn.click()
         random_delay(1, 2)
 
-        # Check for anti-bot "Sign in again" button
-        try:
-            print("Checking for anti-bot detection...")
-            wait_short = WebDriverWait(driver, 5)
-            sign_in_again_btn = wait_short.until(EC.element_to_be_clickable((By.CSS_SELECTOR, 'button[data-id="ErrorPage-Continue"]')))
-            print("⚠ Anti-bot detected! Clicking 'Sign in again'...")
-            move_to_element(driver, sign_in_again_btn)
-            sign_in_again_btn.click()
-            random_delay(2, 3)
-            print("✓ Clicked 'Sign in again', continuing...")
-        except:
-            print("✓ No anti-bot detection, proceeding normally")
-            pass
+        # Check for anti-bot after clicking
+        check_and_handle_antibot(driver)
 
         # Random thông tin
         first_name = fake.first_name()

@@ -38,6 +38,22 @@ def move_to_element(driver, element):
     except:
         pass
 
+def check_and_handle_antibot(driver):
+    """Check for anti-bot 'Sign in again' button and click if present"""
+    try:
+        print("Checking for anti-bot detection...")
+        wait_short = WebDriverWait(driver, 5)
+        sign_in_again_btn = wait_short.until(EC.element_to_be_clickable((By.CSS_SELECTOR, 'button[data-id="ErrorPage-Continue"]')))
+        print("⚠ Anti-bot detected! Clicking 'Sign in again'...")
+        move_to_element(driver, sign_in_again_btn)
+        sign_in_again_btn.click()
+        random_delay(2, 3)
+        print("✓ Clicked 'Sign in again', continuing...")
+        return True
+    except:
+        print("✓ No anti-bot detection, proceeding normally")
+        return False
+
 def change_email_to_trash(email, password):
     driver = None
     try:
@@ -94,6 +110,10 @@ def change_email_to_trash(email, password):
             print("Using regular selenium webdriver for login.")
         driver.get("https://account.adobe.com/vn")
         wait = WebDriverWait(driver, 60)
+        random_delay(2, 3)
+        
+        # Check for anti-bot right after page load
+        check_and_handle_antibot(driver)
 
         # Điền email
         email_field = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, '#EmailPage-EmailField')))
@@ -107,19 +127,8 @@ def change_email_to_trash(email, password):
         continue_btn.click()
         random_delay(1, 2)
 
-        # Check for anti-bot "Sign in again" button
-        try:
-            print("Checking for anti-bot detection...")
-            wait_short = WebDriverWait(driver, 5)
-            sign_in_again_btn = wait_short.until(EC.element_to_be_clickable((By.CSS_SELECTOR, 'button[data-id="ErrorPage-Continue"]')))
-            print("⚠ Anti-bot detected! Clicking 'Sign in again'...")
-            move_to_element(driver, sign_in_again_btn)
-            sign_in_again_btn.click()
-            random_delay(2, 3)
-            print("✓ Clicked 'Sign in again', continuing...")
-        except:
-            print("✓ No anti-bot detection, proceeding normally")
-            pass
+        # Check for anti-bot after clicking
+        check_and_handle_antibot(driver)
 
         # check xem no co bat 2FA khong bang cac xem data-id="CodeInput-0" co ton tai khong
         try:
