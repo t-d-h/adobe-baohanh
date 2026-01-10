@@ -504,8 +504,8 @@ def add_user_to_admin_console(admin_account, user_email):
         # Check for anti-bot "Sign in again" button
         try:
             print("[DEBUG] Checking for anti-bot detection...")
-            wait_short = WebDriverWait(driver, 3)
-            sign_in_again_btn = wait_short.until(EC.presence_of_element_located((By.XPATH, "//button[contains(., 'Sign in again')]")))
+            wait_short = WebDriverWait(driver, 5)
+            sign_in_again_btn = wait_short.until(EC.element_to_be_clickable((By.CSS_SELECTOR, 'button[data-id="ErrorPage-Continue"]')))
             print("⚠ Anti-bot detected! Clicking 'Sign in again'...")
             move_to_element(sign_in_again_btn)
             sign_in_again_btn.click()
