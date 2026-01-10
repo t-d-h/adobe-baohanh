@@ -66,7 +66,7 @@ def change_email_to_trash(email, password):
         driver.find_element(By.CSS_SELECTOR, 'button[data-id="PasswordPage-ContinueButton"]').click()
 
         time.sleep(1)
-        wait = WebDriverWait(driver, 60)
+        wait = WebDriverWait(driver, 180)
         wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, '.account-profile-change-email')))
         driver.find_element(By.CSS_SELECTOR, '.account-profile-change-email').click()
          
