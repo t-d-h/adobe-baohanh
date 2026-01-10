@@ -114,6 +114,7 @@ def change_email_to_trash(email, password):
         
         # Check for anti-bot right after page load
         check_and_handle_antibot(driver)
+        random_delay(1, 2)  # Extra wait for page to stabilize
 
         # Điền email
         email_field = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, '#EmailPage-EmailField')))
@@ -129,6 +130,7 @@ def change_email_to_trash(email, password):
 
         # Check for anti-bot after clicking
         check_and_handle_antibot(driver)
+        random_delay(1, 2)  # Extra wait for page to stabilize
 
         # check xem no co bat 2FA khong bang cac xem data-id="CodeInput-0" co ton tai khong
         try:

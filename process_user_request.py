@@ -503,6 +503,7 @@ def add_user_to_admin_console(admin_account, user_email):
         
         # Check for anti-bot after clicking
         check_and_handle_antibot(driver)
+        random_delay(1, 2)  # Extra wait for page to stabilize
         
         # Fill admin password
         print("[3/8] Filling admin password...")
