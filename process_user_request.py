@@ -154,7 +154,7 @@ def login_customer_and_change_email(customer_email, customer_password):
         options.add_argument('--no-sandbox')
         options.add_argument('--disable-dev-shm-usage')
         options.add_argument('--start-maximized')
-        
+        # options.binary_location = r"C:\Users\Administrator\Downloads\GoogleChromePortable\GoogleChromePortable.exe"
         driver = uc.Chrome(options=options, use_subprocess=True, version_main=None)
         wait = WebDriverWait(driver, 60)
         
@@ -593,13 +593,13 @@ def add_user_to_admin_console(admin_account, user_email):
             admin_profile_name = admin_account['email'].split('@')[0]  # Fallback
         
         # DEBUG: Save HTML and screenshot
-        try:
-            html_content = driver.page_source
-            with open('admin_console_debug.html', 'w', encoding='utf-8') as f:
-                f.write(html_content)
-            driver.save_screenshot('admin_console_debug.png')
-        except Exception as e:
-            print(f"⚠ Could not save debug files: {e}")
+        # try:
+        #     html_content = driver.page_source
+        #     with open('admin_console_debug.html', 'w', encoding='utf-8') as f:
+        #         f.write(html_content)
+        #     driver.save_screenshot('admin_console_debug.png')
+        # except Exception as e:
+        #     print(f"⚠ Could not save debug files: {e}")
         
         # Navigate to Users page
         print("[8/9] Navigating to Users...")
@@ -651,15 +651,15 @@ def add_user_to_admin_console(admin_account, user_email):
             random_delay(1, 2)
             
             # DEBUG: Save HTML and screenshot of add user popup
-            try:
-                print("[DEBUG] Saving add user popup HTML and screenshot...")
-                html_content = driver.page_source
-                with open('add_user_popup_debug.html', 'w', encoding='utf-8') as f:
-                    f.write(html_content)
-                driver.save_screenshot('add_user_popup_debug.png')
-                print("✓ Saved: add_user_popup_debug.html and add_user_popup_debug.png")
-            except Exception as e:
-                print(f"⚠ Could not save debug files: {e}")
+            # try:
+            #     print("[DEBUG] Saving add user popup HTML and screenshot...")
+            #     html_content = driver.page_source
+            #     with open('add_user_popup_debug.html', 'w', encoding='utf-8') as f:
+            #         f.write(html_content)
+            #     driver.save_screenshot('add_user_popup_debug.png')
+            #     print("✓ Saved: add_user_popup_debug.html and add_user_popup_debug.png")
+            # except Exception as e:
+            #     print(f"⚠ Could not save debug files: {e}")
             
             # Wait for loading spinner to disappear
             try:
@@ -735,15 +735,15 @@ def add_user_to_admin_console(admin_account, user_email):
             random_delay(1, 2)
             
             # DEBUG: Save products selection popup
-            try:
-                print("[DEBUG] Saving products selection popup...")
-                html_content = driver.page_source
-                with open('products_selection_debug.html', 'w', encoding='utf-8') as f:
-                    f.write(html_content)
-                driver.save_screenshot('products_selection_debug.png')
-                print("✓ Saved: products_selection_debug.html and products_selection_debug.png")
-            except Exception as e:
-                print(f"⚠ Could not save debug files: {e}")
+            # try:
+            #     print("[DEBUG] Saving products selection popup...")
+            #     html_content = driver.page_source
+            #     with open('products_selection_debug.html', 'w', encoding='utf-8') as f:
+            #         f.write(html_content)
+            #     driver.save_screenshot('products_selection_debug.png')
+            #     print("✓ Saved: products_selection_debug.html and products_selection_debug.png")
+            # except Exception as e:
+            #     print(f"⚠ Could not save debug files: {e}")
             
             # Select Creative Cloud Pro
             print("☁️ Selecting Creative Cloud Pro...")
@@ -855,7 +855,7 @@ def process_user_request(user_email):
     if not admin_acc:
         return {
             'status': 'error',
-            'message': 'Hết tài khoản admin, liên hệ shop qua zalo: 0876722439'
+            'message': 'Hệ thống tạm thời hết tài khoản, liên hệ shop qua zalo: 0876722439'
         }
     
     print(f"\n[Adding {user_email} to {admin_acc['email']}...]")

